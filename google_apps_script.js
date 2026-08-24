@@ -65,6 +65,9 @@ function doPost(e) {
       }
       masterSheet.getRange("A2").setValue(JSON.stringify(data.masterData));
 
+      // Tự động đảm bảo Sheet "Đơn Hàng & Giao Hàng" được khởi tạo chuẩn mẫu
+      try { createDonHangGiaoHangSheet(); } catch (eDh) { console.log(eDh); }
+
       // Đồng bộ tự động danh sách Công Nhân từ Master Data sang Sheet "Danh Sách Công Nhân"
       if (data.masterData.userAccounts && Array.isArray(data.masterData.userAccounts)) {
         var wSheet = ss.getSheetByName("Danh Sách Công Nhân") || ss.insertSheet("Danh Sách Công Nhân");
@@ -92,6 +95,60 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({
         "result": "success",
         "message": "Đã đồng bộ thành công Sản phẩm, Nguyên công & Công nhân mới lên Cloud!"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // XỬ LÝ LƯU HOẶC CẬP NHẬT ĐƠN HÀNG & GIAO HÀNG TỪ ADMIN
+    if (data.action === "saveOrderData" && data.order) {
+      var orderSheet = createDonHangGiaoHangSheet();
+      var o = data.order;
+      var oPo = String(o.po || "").trim();
+
+      var oRows = orderSheet.getDataRange().getValues();
+      var foundRow = -1;
+
+      for (var r = 1; r < oRows.length; r++) {
+        if (String(oRows[r][1]).trim().toLowerCase() === oPo.toLowerCase()) {
+          foundRow = r + 1;
+          break;
+        }
+      }
+
+      var qtyPlan = Number(o.qty_plan || 0);
+      var qtyDelivered = Number(o.qty_delivered || 0);
+      var status = qtyDelivered >= qtyPlan ? "Đã giao đủ" : "Đang sản xuất";
+
+      if (foundRow > 1) {
+        // Cập nhật dòng PO hiện có
+        orderSheet.getRange(foundRow, 5).setValue(qtyPlan);
+        orderSheet.getRange(foundRow, 7).setValue(qtyDelivered);
+        orderSheet.getRange(foundRow, 8).setFormula("=E" + foundRow + "-G" + foundRow);
+        orderSheet.getRange(foundRow, 10).setValue(o.deadline || "");
+        orderSheet.getRange(foundRow, 11).setValue(status);
+        if (o.note) orderSheet.getRange(foundRow, 12).setValue(o.note);
+      } else {
+        // Thêm PO mới vào dòng cuối
+        var nextSttOrder = oRows.length;
+        var rowFormula = "=E" + (nextSttOrder + 1) + "-G" + (nextSttOrder + 1);
+        orderSheet.appendRow([
+          nextSttOrder,
+          oPo,
+          o.customer || "",
+          o.product || "",
+          qtyPlan,
+          0,
+          qtyDelivered,
+          rowFormula,
+          o.order_date || "",
+          o.deadline || "",
+          status,
+          o.note || ""
+        ]);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        "result": "success",
+        "message": "Đã lưu & đồng bộ Đơn hàng lên Google Sheet 'Đơn Hàng & Giao Hàng'!"
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -393,3 +450,83 @@ function testDrivePermissions() {
   var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
   Logger.log("✅ Quyền truy cập Google Drive đã được phê duyệt thành công! Thư mục ID: " + folder.getId());
 }
+
+// ==============================================================================
+// 9. MENU TỰ ĐỘNG & TẠO SHEET "ĐƠN HÀNG & GIAO HÀNG" CHUẨN MẪU
+// ==============================================================================
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu("⚙️ Quản Lý GCCK 2026")
+    .addItem("📦 Khởi Tạo Sheet 'Đơn Hàng & Giao Hàng'", "createDonHangGiaoHangSheet")
+    .addItem("⏰ Cài Đặt Bộ Hẹn Giờ Cảnh Báo 3 Ca", "setupShiftTriggers")
+    .addToUi();
+}
+
+function createDonHangGiaoHangSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = "Đơn Hàng & Giao Hàng";
+  var sheet = ss.getSheetByName(sheetName);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  }
+
+  if (sheet.getLastRow() === 0) {
+    // 1. Tiêu đề các cột tiêu chuẩn
+    var headers = [
+      "STT", 
+      "Mã PO / Đơn Hàng", 
+      "Khách Hàng", 
+      "Tên Sản Phẩm", 
+      "SL Đặt Hàng (Kế Hoạch)", 
+      "SL Đã Gia Công (Đạt)", 
+      "SL Đã Giao Hàng", 
+      "SL Còn Lại (Nợ Hàng)", 
+      "Ngày Đặt Hàng", 
+      "Hạn Giao Hàng (Deadline)", 
+      "Trạng Thái Đơn Hàng", 
+      "Ghi Chú Chi Tiết"
+    ];
+
+    sheet.appendRow(headers);
+
+    // Định dạng Thanh tiêu đề Header
+    var headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#1e293b");
+    headerRange.setFontColor("#ffffff");
+    headerRange.setHorizontalAlignment("center");
+    headerRange.setVerticalAlignment("middle");
+    sheet.setRowHeight(1, 35);
+    sheet.setFrozenRows(1);
+
+    // 2. Dữ liệu mẫu chuẩn hóa minh họa
+    var sampleRows = [
+      [1, "PO-2026-001", "Win-Win", "Trục Khuỷu Động Cơ Φ250", 1000, 850, 500, "=E2-G2", "2026-08-01", "2026-08-30", "Đang sản xuất", "Giao đợt 1 thành công 500 pcs"],
+      [2, "PO-2026-002", "UCC", "Khuôn gá xích POWER", 200, 200, 200, "=E3-G3", "2026-08-05", "2026-08-20", "Đã giao đủ", "Hoàn thành 100% đúng hạn"],
+      [3, "PO-2026-003", "Kachimizu", "Cụm Bán Thành Phẩm ALKTOP", 500, 120, 0, "=E4-G4", "2026-08-10", "2026-08-25", "Đang sản xuất", "Đã xong công đoạn phay"]
+    ];
+
+    for (var r = 0; r < sampleRows.length; r++) {
+      sheet.appendRow(sampleRows[r]);
+    }
+
+    // Căn lề & Định dạng căn chỉnh
+    var dataRange = sheet.getRange(2, 1, sampleRows.length, headers.length);
+    dataRange.setVerticalAlignment("middle");
+    sheet.getRange(2, 1, sampleRows.length, 1).setHorizontalAlignment("center"); // STT
+    sheet.getRange(2, 5, sampleRows.length, 4).setHorizontalAlignment("right");  // Số lượng
+    sheet.getRange(2, 9, sampleRows.length, 2).setHorizontalAlignment("center"); // Ngày
+    sheet.getRange(2, 11, sampleRows.length, 1).setHorizontalAlignment("center"); // Trạng thái
+
+    // Auto fit cột
+    for (var col = 1; col <= headers.length; col++) {
+      sheet.autoResizeColumn(col);
+    }
+    Logger.log("✅ Đã khởi tạo thành công Sheet 'Đơn Hàng & Giao Hàng' trên Google Sheets!");
+  } else {
+    Logger.log("ℹ️ Sheet 'Đơn Hàng & Giao Hàng' đã tồn tại sẵn.");
+  }
+  return sheet;
+}
+

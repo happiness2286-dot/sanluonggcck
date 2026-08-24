@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mini App Báo Cáo Sản Lượng GCCK 2026</title>
-    <link rel="stylesheet" href="css/styles.css?v=20260824_1445">
+    <link rel="stylesheet" href="css/styles.css?v=20260824_2130">
 </head>
 <body>
 
@@ -301,6 +301,81 @@
             </div>
         </div>
 
+        <!-- Order & Delivery Management Card -->
+        <div class="card" style="border-color: rgba(245, 158, 11, 0.5); background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(67, 34, 0, 0.3));">
+            <div class="card-title" style="color: #fbbf24; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <span>📦 BẢNG QUẢN LÝ ĐƠN HÀNG & TIẾN ĐỘ GIAO HÀNG REALTIME</span>
+                <span class="icon-badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">PO & DELIVERY</span>
+            </div>
+            
+            <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 16px;">
+                *Đối soát Tiến độ Sản Xuất (SL Đạt cộng dồn) vs Tiến độ Giao Hàng (SL Đã Xuất Kho). Tự động tính số nợ hàng và cảnh báo trễ hạn.
+            </p>
+
+            <!-- Form Thêm Đơn Hàng PO Mới -->
+            <div style="background: rgba(30, 41, 59, 0.7); padding: 14px; border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.25); margin-bottom: 16px;">
+                <h4 style="font-size: 13px; color: #fbbf24; margin-bottom: 10px;">➕ TẠO ĐƠN HÀNG / PO MỚI</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; align-items: end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 11px;">Mã PO / Đơn Hàng (*)</label>
+                        <input type="text" id="orderPoInput" class="form-input" placeholder="Ví dụ: PO-2026-0801" style="padding: 6px 10px; font-size: 12px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 11px;">Khách Hàng (*)</label>
+                        <select id="orderCustomerSelect" class="form-select" style="padding: 6px 10px; font-size: 12px;">
+                            <option value="">-- Chọn Khách Hàng --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 11px;">Tên Sản Phẩm (*)</label>
+                        <select id="orderProductSelect" class="form-select" style="padding: 6px 10px; font-size: 12px;">
+                            <option value="">-- Chọn Sản Phẩm --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 11px;">SL Đặt Hàng (*)</label>
+                        <input type="number" id="orderQtyPlanInput" class="form-input" placeholder="Ví dụ: 1000" min="1" style="padding: 6px 10px; font-size: 12px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 11px;">Hạn Giao (Deadline) (*)</label>
+                        <input type="date" id="orderDeadlineInput" class="form-input" style="padding: 6px 10px; font-size: 12px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 11px;">Ghi Chú</label>
+                        <input type="text" id="orderNoteInput" class="form-input" placeholder="Đợt 1 giao trước..." style="padding: 6px 10px; font-size: 12px;">
+                    </div>
+                    <div>
+                        <button id="btnSaveOrder" class="btn-submit" style="padding: 8px 12px; font-size: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); height: 35px; justify-content: center; width: 100%;">
+                            💾 LƯU PO MỚI
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Don Hang & Giao Hang -->
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Mã PO</th>
+                            <th>Khách Hàng</th>
+                            <th>Sản Phẩm</th>
+                            <th>SL Đặt Hàng</th>
+                            <th>Đã Gia Công</th>
+                            <th>SL Đã Giao</th>
+                            <th>SL Còn Nợ</th>
+                            <th>Hạn Giao</th>
+                            <th>Trạng Thái</th>
+                            <th>Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderTableTbody">
+                        <!-- Populated dynamically by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- User Accounts Management Card -->
         <div class="card">
             <div class="card-title">
@@ -477,6 +552,10 @@ NC4: Mài hoàn thiện | 2400 | 30000"></textarea>
                 </div>
                 <p style="font-size: 11px; color: #94a3b8; margin-top: 6px;">
                     *Nhập Web App URL sau khi triển khai Apps Script. Dữ liệu báo cáo của công nhân sẽ tự động đồng bộ lên Google Sheets ngay lập tức.
+                </p>
+            </div>
+        </div>
+
         <!-- Realtime WIP Progress Tracking Card -->
         <div class="card">
             <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
@@ -635,14 +714,61 @@ NC4: Mài hoàn thiện | 2400 | 30000"></textarea>
         </div>
     </div>
 
+    <!-- Delivery Update Modal Window -->
+    <div id="deliveryModal" class="modal-overlay">
+        <div class="modal-card auth-box">
+            <button class="modal-close" id="btnCloseDeliveryModal">✕</button>
+            <div class="auth-header">
+                <div style="font-size: 36px;">🚚</div>
+                <h2>CẬP NHẬT XUẤT GIAO HÀNG</h2>
+                <p style="font-size: 12px; color: var(--text-muted);" id="deliveryModalSubTitle">Mã PO: -- | Sản Phẩm: --</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Mã PO / Đơn Hàng</label>
+                <input type="text" id="deliveryPoDisplay" class="form-input" readonly style="background: rgba(255,255,255,0.05); color: #fbbf24; font-weight: 700;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label class="form-label">SL Đã Gia Công (Đạt)</label>
+                    <input type="text" id="deliveryProducedDisplay" class="form-input" readonly style="background: rgba(255,255,255,0.05); color: #34d399; font-weight: 700;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">SL Đã Giao Hiện Tại</label>
+                    <input type="text" id="deliveryCurrentDeliveredDisplay" class="form-input" readonly style="background: rgba(255,255,255,0.05); color: #60a5fa; font-weight: 700;">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" style="color: #fbbf24;">📦 Số Lượng Giao Đợt Này (*)</label>
+                <input type="number" id="deliveryQtyAddInput" class="form-input" placeholder="Ví dụ: 100" min="1" style="font-size: 16px; font-weight: 700;">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Ngày Giao Hàng (*)</label>
+                <input type="date" id="deliveryDateInput" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Ghi Chú Đợt Giao (Phiếu Xuất Kho / Xe Giao)</label>
+                <input type="text" id="deliveryNoteInput" class="form-input" placeholder="Ví dụ: Giao đợt 2 qua xe tải 14C-123.45">
+            </div>
+
+            <button id="btnSubmitDelivery" class="btn-submit" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <span>✅ XÁC NHẬN GIAO HÀNG & CẬP NHẬT TRẠNG THÁI</span>
+            </button>
+        </div>
+    </div>
+
     <!-- Toast Notifications Container -->
     <div id="toastContainer" class="toast-container"></div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="js/data.js?v=20260824_1635"></script>
-    <script src="js/qr-scanner.js?v=20260824_1635"></script>
-    <script src="js/app.js?v=20260824_1635"></script>
+    <script src="js/data.js?v=20260824_2130"></script>
+    <script src="js/qr-scanner.js?v=20260824_2130"></script>
+    <script src="js/app.js?v=20260824_2130"></script>
 
 </body>
 </html>

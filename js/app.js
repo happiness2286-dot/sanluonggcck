@@ -114,9 +114,56 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
     }
 
-    // Ensure userAccounts is guaranteed to be present and populated
+    // Ensure userAccounts is guaranteed to be present and populated with default accounts
     if (!window.AppData.userAccounts || window.AppData.userAccounts.length === 0) {
-        window.AppData.userAccounts = (window.INITIAL_DATA && window.INITIAL_DATA.userAccounts) ? window.INITIAL_DATA.userAccounts : [];
+        window.AppData.userAccounts = [
+            { id: "ADMIN01", username: "admin", name: "Quản Trị Viên", role: "admin", password: "1234" },
+            { id: "NV01", username: "hoangha", name: "Hoàng Ngọc Hà", role: "worker", password: "1234" }
+        ];
+        localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
+    } else {
+        // Ensure admin account exists
+        const hasAdmin = window.AppData.userAccounts.some(u => u.role === 'admin' || u.username === 'admin');
+        if (!hasAdmin) {
+            window.AppData.userAccounts.unshift({ id: "ADMIN01", username: "admin", name: "Quản Trị Viên", role: "admin", password: "1234" });
+            localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
+        }
+    }
+
+    // Ensure orders is guaranteed to be present and populated with sample POs
+    if (!window.AppData.orders || !Array.isArray(window.AppData.orders) || window.AppData.orders.length === 0) {
+        window.AppData.orders = [
+            {
+                po: "PO-2026-001",
+                customer: "Win-Win",
+                product: "Trục Khuỷu Động Cơ Φ250",
+                qty_plan: 1000,
+                qty_delivered: 500,
+                order_date: "2026-08-01",
+                deadline: "2026-08-30",
+                note: "Giao đợt 1 thành công 500 pcs"
+            },
+            {
+                po: "PO-2026-002",
+                customer: "UCC",
+                product: "Khuôn gá xích POWER",
+                qty_plan: 200,
+                qty_delivered: 200,
+                order_date: "2026-08-05",
+                deadline: "2026-08-20",
+                note: "Hoàn thành 100% đúng hạn"
+            },
+            {
+                po: "PO-2026-003",
+                customer: "Kachimizu",
+                product: "Cụm Bán Thành Phẩm ALKTOP",
+                qty_plan: 500,
+                qty_delivered: 0,
+                order_date: "2026-08-10",
+                deadline: "2026-08-25",
+                note: "Đang sản xuất đợt 1"
+            }
+        ];
         localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
     }
 
@@ -478,6 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update datalists for Master Data addition form
         updateMasterDataDatalists();
+        initOrderDropdowns();
     }
 
     // Force Sync Data Button Listener
@@ -1521,11 +1569,48 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
             ];
 
             if (typeof XLSX !== 'undefined') {
-                const worksheet = XLSX.utils.json_to_sheet(templateData);
                 const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "Mau_Quy_Trinh");
-                XLSX.writeFile(workbook, "Mau_Quy_Trinh_Cong_Nghe_GCCK_Template.xlsx");
-                showToast("📄 Đã tải thành công File Excel Mẫu Quy trình Công nghệ!", "success");
+
+                // Sheet 1: Quy trình công nghệ
+                const worksheet1 = XLSX.utils.json_to_sheet(templateData);
+                XLSX.utils.book_append_sheet(workbook, worksheet1, "Mau_Quy_Trinh");
+
+                // Sheet 2: Đơn hàng và giao hàng
+                const orderTemplateData = [
+                    {
+                        "STT": 1,
+                        "Mã PO / Đơn Hàng (*)": "PO-2026-001",
+                        "Khách Hàng (*)": "Win-Win",
+                        "Tên Sản Phẩm (*)": "Trục Khuỷu Động Cơ Φ250",
+                        "SL Đặt Hàng (Kế Hoạch)": 1000,
+                        "SL Đã Gia Công (Đạt)": 850,
+                        "SL Đã Giao Hàng": 500,
+                        "SL Còn Lại (Nợ Hàng)": 500,
+                        "Ngày Đặt Hàng": "2026-08-01",
+                        "Hạn Giao Hàng (Deadline)": "2026-08-30",
+                        "Trạng Thái Đơn Hàng": "Đang sản xuất",
+                        "Ghi Chú Chi Tiết": "Giao đợt 1 thành công 500 pcs"
+                    },
+                    {
+                        "STT": 2,
+                        "Mã PO / Đơn Hàng (*)": "PO-2026-002",
+                        "Khách Hàng (*)": "UCC",
+                        "Tên Sản Phẩm (*)": "Khuôn gá xích POWER",
+                        "SL Đặt Hàng (Kế Hoạch)": 200,
+                        "SL Đã Gia Công (Đạt)": 200,
+                        "SL Đã Giao Hàng": 200,
+                        "SL Còn Lại (Nợ Hàng)": 0,
+                        "Ngày Đặt Hàng": "2026-08-05",
+                        "Hạn Giao Hàng (Deadline)": "2026-08-20",
+                        "Trạng Thái Đơn Hàng": "Đã giao đủ",
+                        "Ghi Chú Chi Tiết": "Hoàn thành 100% đúng hạn"
+                    }
+                ];
+                const worksheet2 = XLSX.utils.json_to_sheet(orderTemplateData);
+                XLSX.utils.book_append_sheet(workbook, worksheet2, "Don_Hang_Giao_Hang");
+
+                XLSX.writeFile(workbook, "Bao_Cao_San_Luong_GCCK_GoogleSheet_Template.xlsx");
+                showToast("📄 Đã tải thành công File Excel Mẫu (Quy trình & Đơn Hàng Giao Hàng)!", "success");
             } else {
                 showToast("Đang kết nối thư viện Excel...", "info");
             }
@@ -1699,6 +1784,253 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
         });
     }
 
+    // 16. ORDER & DELIVERY MANAGEMENT LOGIC
+    const orderPoInput = document.getElementById('orderPoInput');
+    const orderCustomerSelect = document.getElementById('orderCustomerSelect');
+    const orderProductSelect = document.getElementById('orderProductSelect');
+    const orderQtyPlanInput = document.getElementById('orderQtyPlanInput');
+    const orderDeadlineInput = document.getElementById('orderDeadlineInput');
+    const orderNoteInput = document.getElementById('orderNoteInput');
+    const btnSaveOrder = document.getElementById('btnSaveOrder');
+
+    const deliveryModal = document.getElementById('deliveryModal');
+    const btnCloseDeliveryModal = document.getElementById('btnCloseDeliveryModal');
+    const deliveryPoDisplay = document.getElementById('deliveryPoDisplay');
+    const deliveryProducedDisplay = document.getElementById('deliveryProducedDisplay');
+    const deliveryCurrentDeliveredDisplay = document.getElementById('deliveryCurrentDeliveredDisplay');
+    const deliveryQtyAddInput = document.getElementById('deliveryQtyAddInput');
+    const deliveryDateInput = document.getElementById('deliveryDateInput');
+    const deliveryNoteInput = document.getElementById('deliveryNoteInput');
+    const btnSubmitDelivery = document.getElementById('btnSubmitDelivery');
+    const deliveryModalSubTitle = document.getElementById('deliveryModalSubTitle');
+
+    let activeDeliveryPoIndex = -1;
+
+    function initOrderDropdowns() {
+        if (!orderCustomerSelect) return;
+        orderCustomerSelect.innerHTML = '<option value="">-- Chọn Khách Hàng --</option>';
+        (window.AppData.customers || []).forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            orderCustomerSelect.appendChild(opt);
+        });
+    }
+
+    if (orderCustomerSelect && orderProductSelect) {
+        orderCustomerSelect.addEventListener('change', () => {
+            const cust = orderCustomerSelect.value;
+            orderProductSelect.innerHTML = '<option value="">-- Chọn Sản Phẩm --</option>';
+            if (cust && window.AppData.productsByCustomer && window.AppData.productsByCustomer[cust]) {
+                window.AppData.productsByCustomer[cust].forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p;
+                    opt.textContent = p;
+                    orderProductSelect.appendChild(opt);
+                });
+            }
+        });
+    }
+
+    function renderOrderManagementTable() {
+        const tbody = document.getElementById('orderTableTbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const orders = window.AppData.orders || [];
+        const logs = window.AppData.historyLogs || [];
+
+        if (orders.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:#94a3b8; padding:16px;">Chưa có đơn hàng (PO) nào. Hãy tạo PO mới ở trên!</td></tr>`;
+            return;
+        }
+
+        const todayStr = getTodayDateString();
+
+        orders.forEach((o, index) => {
+            let qtyProduced = 0;
+            logs.forEach(l => {
+                const matchPo = o.po && l.po && l.po.trim().toLowerCase() === o.po.trim().toLowerCase();
+                const matchProduct = l.customer === o.customer && l.product === o.product;
+                if (matchPo || matchProduct) {
+                    qtyProduced += (l.qty_dat || 0);
+                }
+            });
+
+            const qtyDelivered = o.qty_delivered || 0;
+            const qtyRemaining = Math.max(0, o.qty_plan - qtyDelivered);
+            const pctProduced = Math.min(100, Math.round((qtyProduced / (o.qty_plan || 1)) * 100));
+
+            let statusBadge = '';
+            if (qtyDelivered >= o.qty_plan) {
+                statusBadge = '<span class="status-badge badge-success">🟢 Đã giao đủ</span>';
+            } else if (qtyProduced >= o.qty_plan) {
+                statusBadge = '<span class="status-badge badge-info">🔵 Chờ giao hàng</span>';
+            } else if (o.deadline && o.deadline < todayStr) {
+                statusBadge = '<span class="status-badge badge-danger">🔴 Trễ hạn</span>';
+            } else {
+                statusBadge = '<span class="status-badge badge-warning">🟡 Đang sản xuất</span>';
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong style="color:#fbbf24;">${o.po}</strong></td>
+                <td>${o.customer}</td>
+                <td><span style="color:#60a5fa; font-weight:600;">${o.product}</span></td>
+                <td><strong>${(o.qty_plan || 0).toLocaleString()}</strong></td>
+                <td>
+                    <div style="font-weight:700; color:#34d399;">${qtyProduced.toLocaleString()} / ${(o.qty_plan || 0).toLocaleString()} (${pctProduced}%)</div>
+                    <div class="progress-container">
+                        <div class="progress-bar-fill" style="width: ${pctProduced}%; background: ${pctProduced >= 100 ? '#34d399' : '#60a5fa'};"></div>
+                    </div>
+                </td>
+                <td><strong style="color:#60a5fa;">${qtyDelivered.toLocaleString()}</strong></td>
+                <td><strong style="color:${qtyRemaining > 0 ? '#f87171' : '#34d399'};">${qtyRemaining.toLocaleString()}</strong></td>
+                <td>${o.deadline || '--'}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    <div style="display:flex; gap:6px;">
+                        <button class="pill-btn" onclick="openDeliveryModal(${index})" style="background:rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.4); font-size:11px; padding:4px 8px; cursor:pointer;">
+                            🚚 Giao Hàng
+                        </button>
+                        <button class="pill-btn" onclick="deleteOrder(${index})" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); font-size:11px; padding:4px 6px; cursor:pointer;">
+                            🗑️
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.openDeliveryModal = function(index) {
+        const order = (window.AppData.orders || [])[index];
+        if (!order) return;
+        activeDeliveryPoIndex = index;
+
+        let qtyProduced = 0;
+        (window.AppData.historyLogs || []).forEach(l => {
+            const matchPo = order.po && l.po && l.po.trim().toLowerCase() === order.po.trim().toLowerCase();
+            const matchProduct = l.customer === order.customer && l.product === order.product;
+            if (matchPo || matchProduct) qtyProduced += (l.qty_dat || 0);
+        });
+
+        if (deliveryModalSubTitle) deliveryModalSubTitle.textContent = `Mã PO: ${order.po} | SP: ${order.product}`;
+        if (deliveryPoDisplay) deliveryPoDisplay.value = order.po;
+        if (deliveryProducedDisplay) deliveryProducedDisplay.value = `${qtyProduced.toLocaleString()} Pcs`;
+        if (deliveryCurrentDeliveredDisplay) deliveryCurrentDeliveredDisplay.value = `${(order.qty_delivered || 0).toLocaleString()} Pcs`;
+        if (deliveryQtyAddInput) deliveryQtyAddInput.value = Math.max(0, order.qty_plan - (order.qty_delivered || 0));
+        if (deliveryDateInput) deliveryDateInput.value = getTodayDateString();
+        if (deliveryNoteInput) deliveryNoteInput.value = '';
+
+        if (deliveryModal) deliveryModal.classList.add('active');
+    };
+
+    if (btnCloseDeliveryModal) {
+        btnCloseDeliveryModal.addEventListener('click', () => {
+            if (deliveryModal) deliveryModal.classList.remove('active');
+        });
+    }
+
+    if (btnSubmitDelivery) {
+        btnSubmitDelivery.addEventListener('click', () => {
+            if (activeDeliveryPoIndex < 0 || !window.AppData.orders || !window.AppData.orders[activeDeliveryPoIndex]) return;
+
+            const order = window.AppData.orders[activeDeliveryPoIndex];
+            const qtyAdd = parseInt(deliveryQtyAddInput.value) || 0;
+            const delDate = deliveryDateInput.value;
+            const note = deliveryNoteInput.value.trim();
+
+            if (qtyAdd <= 0) {
+                showToast('Vui lòng nhập Số lượng xuất giao hàng hợp lệ > 0!', 'warning');
+                return;
+            }
+
+            order.qty_delivered = (order.qty_delivered || 0) + qtyAdd;
+            if (note) {
+                order.note = (order.note ? order.note + " | " : "") + `Giao ${qtyAdd} pcs ngày ${delDate}: ${note}`;
+            }
+
+            localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
+            renderOrderManagementTable();
+
+            if (deliveryModal) deliveryModal.classList.remove('active');
+            showToast(`🚚 Đã ghi nhận xuất giao ${qtyAdd} pcs cho PO ${order.po}!`, 'success');
+
+            pushOrderDataToCloud(order);
+        });
+    }
+
+    window.deleteOrder = function(index) {
+        if (confirm('Bạn có chắc chắn muốn xóa Đơn hàng PO này?')) {
+            window.AppData.orders.splice(index, 1);
+            localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
+            renderOrderManagementTable();
+            showToast('Đã xóa Đơn hàng khỏi danh sách', 'info');
+        }
+    };
+
+    if (btnSaveOrder) {
+        btnSaveOrder.addEventListener('click', () => {
+            const po = orderPoInput ? orderPoInput.value.trim() : '';
+            const customer = orderCustomerSelect ? orderCustomerSelect.value : '';
+            const product = orderProductSelect ? orderProductSelect.value : '';
+            const qtyPlan = parseInt(orderQtyPlanInput ? orderQtyPlanInput.value : 0) || 0;
+            const deadline = orderDeadlineInput ? orderDeadlineInput.value : '';
+            const note = orderNoteInput ? orderNoteInput.value.trim() : '';
+
+            if (!po || !customer || !product || qtyPlan <= 0) {
+                showToast('Vui lòng nhập đầy đủ Mã PO, Khách hàng, Sản phẩm & SL Đặt Hàng!', 'warning');
+                return;
+            }
+
+            const newOrder = {
+                po: po,
+                customer: customer,
+                product: product,
+                qty_plan: qtyPlan,
+                qty_delivered: 0,
+                order_date: getTodayDateString(),
+                deadline: deadline || getTodayDateString(),
+                note: note
+            };
+
+            if (!window.AppData.orders) window.AppData.orders = [];
+            window.AppData.orders.unshift(newOrder);
+
+            localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
+            renderOrderManagementTable();
+
+            if (orderPoInput) orderPoInput.value = '';
+            if (orderQtyPlanInput) orderQtyPlanInput.value = '';
+            if (orderNoteInput) orderNoteInput.value = '';
+
+            showToast(`📦 Đã tạo thành công Đơn hàng PO mới: ${po}!`, 'success');
+
+            pushOrderDataToCloud(newOrder);
+        });
+    }
+
+    function pushOrderDataToCloud(orderObj) {
+        const scriptUrl = DEFAULT_GOOGLE_SCRIPT_URL;
+        if (!scriptUrl) return;
+
+        const payload = {
+            action: 'saveOrderData',
+            order: orderObj
+        };
+
+        fetch(scriptUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => console.log('☁️ Order synced to Cloud:', data))
+        .catch(err => console.log('⚠️ Could not sync Order to Cloud:', err));
+    }
+
     // 15. Admin Dashboard Rendering
     function renderAdminDashboard() {
         const logs = window.AppData.historyLogs;
@@ -1720,6 +2052,7 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
         document.getElementById('statTotalHuy').textContent = totalHuy.toLocaleString();
         document.getElementById('statTotalDowntime').textContent = `${totalDowntime} phút`;
 
+        renderOrderManagementTable();
         renderWipProgressTable();
 
         const tbody = document.getElementById('historyLogTbody');
