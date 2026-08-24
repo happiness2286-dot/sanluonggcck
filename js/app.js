@@ -6,6 +6,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tự động đồng bộ URL Google Apps Script mới nhất cho mọi thiết bị
     localStorage.setItem('GOOGLE_SCRIPT_URL', DEFAULT_GOOGLE_SCRIPT_URL);
 
+    // Helper: Normalize Vietnamese Unicode (NFC/NFD) and strip non-alphanumeric characters for robust mobile matching
+    window.cleanKey = function(str) {
+        if (!str) return '';
+        return str.toString()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/đ/g, "d").replace(/Đ/g, "D")
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "");
+    };
+
+    // Helper: Find exact or canonical key for Products & Customers flexible lookup
+    window.getCanonicalProductKey = function(productName) {
+        if (!productName) return '';
+        const trimP = productName.trim();
+        if (!window.AppData || !window.AppData.operationsByProduct) return trimP;
+        if (window.AppData.operationsByProduct[trimP]) return trimP;
+        const targetClean = window.cleanKey(trimP);
+        const foundKey = Object.keys(window.AppData.operationsByProduct).find(k => 
+            window.cleanKey(k) === targetClean
+        );
+        return foundKey || trimP;
+    };
+
+    window.getCanonicalCustomerKey = function(customerName) {
+        if (!customerName) return '';
+        const trimC = customerName.trim();
+        if (!window.AppData || !window.AppData.productsByCustomer) return trimC;
+        if (window.AppData.productsByCustomer[trimC]) return trimC;
+        const targetClean = window.cleanKey(trimC);
+        const foundKey = Object.keys(window.AppData.productsByCustomer).find(k => 
+            window.cleanKey(k) === targetClean
+        );
+        return foundKey || trimC;
+    };
+
     // 1. Initialize State from LocalStorage or INITIAL_DATA
     const savedData = localStorage.getItem('GCCK_APP_DATA');
     if (savedData) {
@@ -24,12 +60,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.INITIAL_DATA.productsByCustomer) {
                     if (!window.AppData.productsByCustomer) window.AppData.productsByCustomer = {};
                     Object.keys(window.INITIAL_DATA.productsByCustomer).forEach(cust => {
-                        if (!window.AppData.productsByCustomer[cust]) {
-                            window.AppData.productsByCustomer[cust] = window.INITIAL_DATA.productsByCustomer[cust];
+                        const targetClean = window.cleanKey(cust);
+                        const existingKey = Object.keys(window.AppData.productsByCustomer).find(k => window.cleanKey(k) === targetClean);
+                        const initProds = window.INITIAL_DATA.productsByCustomer[cust];
+
+                        if (!existingKey) {
+                            window.AppData.productsByCustomer[cust] = [...initProds];
                         } else {
-                            window.INITIAL_DATA.productsByCustomer[cust].forEach(p => {
-                                if (!window.AppData.productsByCustomer[cust].includes(p)) {
-                                    window.AppData.productsByCustomer[cust].push(p);
+                            const arr = window.AppData.productsByCustomer[existingKey];
+                            initProds.forEach(p => {
+                                const pClean = window.cleanKey(p);
+                                if (!arr.some(item => window.cleanKey(item) === pClean)) {
+                                    arr.push(p);
                                 }
                             });
                         }
@@ -38,8 +80,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.INITIAL_DATA.operationsByProduct) {
                     if (!window.AppData.operationsByProduct) window.AppData.operationsByProduct = {};
                     Object.keys(window.INITIAL_DATA.operationsByProduct).forEach(prod => {
-                        if (!window.AppData.operationsByProduct[prod] || window.AppData.operationsByProduct[prod].length === 0) {
-                            window.AppData.operationsByProduct[prod] = window.INITIAL_DATA.operationsByProduct[prod];
+                        const targetClean = window.cleanKey(prod);
+                        const existingKey = Object.keys(window.AppData.operationsByProduct).find(k => window.cleanKey(k) === targetClean);
+                        const initOps = window.INITIAL_DATA.operationsByProduct[prod];
+
+                        if (!existingKey) {
+                            window.AppData.operationsByProduct[prod] = [...initOps];
+                        } else {
+                            const arr = window.AppData.operationsByProduct[existingKey];
+                            if (Array.isArray(initOps) && Array.isArray(arr)) {
+                                initOps.forEach(item => {
+                                    const opName = typeof item === 'string' ? item : (item ? item.op : '');
+                                    const opClean = window.cleanKey(opName);
+                                    if (opName && !arr.some(o => window.cleanKey(typeof o === 'string' ? o : o.op) === opClean)) {
+                                        arr.push(item);
+                                    }
+                                });
+                            }
                         }
                     });
                 }
@@ -47,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!window.AppData.operationWages) window.AppData.operationWages = {};
                     Object.assign(window.AppData.operationWages, window.INITIAL_DATA.operationWages);
                 }
+                localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
             }
         } catch (e) {
             window.AppData = window.INITIAL_DATA;
@@ -55,31 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.AppData = window.INITIAL_DATA;
         localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
     }
-
-    // Helper: Find exact or canonical key for Products & Customers flexible lookup
-    window.getCanonicalProductKey = function(productName) {
-        if (!productName) return '';
-        const trimP = productName.trim();
-        if (!window.AppData || !window.AppData.operationsByProduct) return trimP;
-        if (window.AppData.operationsByProduct[trimP]) return trimP;
-        const cleanTarget = trimP.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const foundKey = Object.keys(window.AppData.operationsByProduct).find(k => 
-            k.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanTarget
-        );
-        return foundKey || trimP;
-    };
-
-    window.getCanonicalCustomerKey = function(customerName) {
-        if (!customerName) return '';
-        const trimC = customerName.trim();
-        if (!window.AppData || !window.AppData.productsByCustomer) return trimC;
-        if (window.AppData.productsByCustomer[trimC]) return trimC;
-        const cleanCust = trimC.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const foundKey = Object.keys(window.AppData.productsByCustomer).find(k => 
-            k.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanCust
-        );
-        return foundKey || trimC;
-    };
 
     // Ensure userAccounts is guaranteed to be present and populated
     if (!window.AppData.userAccounts || window.AppData.userAccounts.length === 0) {
@@ -460,20 +493,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!selectedProduct) return;
 
-        const canonicalProdKey = window.getCanonicalProductKey(selectedProduct);
+        const targetClean = window.cleanKey(selectedProduct);
         let ops = [];
 
         if (window.AppData && window.AppData.operationsByProduct) {
-            // Find all matching keys (exact or fuzzy) and merge their operations so no NC is lost
-            const cleanTarget = selectedProduct.toLowerCase().replace(/[^a-z0-9]/g, '');
+            // Find all matching keys (exact or cleanKey) and merge their operations so no NC is lost
             Object.keys(window.AppData.operationsByProduct).forEach(k => {
-                if (k.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanTarget) {
+                if (window.cleanKey(k) === targetClean) {
                     const rawList = window.AppData.operationsByProduct[k];
                     if (Array.isArray(rawList)) {
                         rawList.forEach(item => {
                             const opName = typeof item === 'string' ? item : (item ? item.op : '');
                             const opTime = typeof item === 'object' && item.time_s ? item.time_s : 1800;
-                            if (opName && !ops.some(o => o.op === opName)) {
+                            const opClean = window.cleanKey(opName);
+                            if (opName && !ops.some(o => window.cleanKey(o.op) === opClean)) {
                                 ops.push({ op: opName, time_s: opTime });
                             }
                         });
@@ -549,13 +582,12 @@ document.addEventListener('DOMContentLoaded', () => {
         wipStockBadge.style.display = 'none';
 
         if (selectedCustomer) {
-            let prods = window.AppData.productsByCustomer[selectedCustomer];
-            if (!prods) {
-                const cleanCust = selectedCustomer.toLowerCase().replace(/[^a-z0-9]/g, '');
-                const foundKey = Object.keys(window.AppData.productsByCustomer).find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanCust);
-                if (foundKey) prods = window.AppData.productsByCustomer[foundKey];
-            }
-            if (prods) {
+            const targetClean = window.cleanKey(selectedCustomer);
+            let prods = null;
+            const foundKey = Object.keys(window.AppData.productsByCustomer).find(k => window.cleanKey(k) === targetClean);
+            if (foundKey) prods = window.AppData.productsByCustomer[foundKey];
+
+            if (prods && Array.isArray(prods)) {
                 prods.forEach(p => {
                     const opt = document.createElement('option');
                     opt.value = p;
@@ -629,8 +661,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let unitWage = 45000;
         if (product && op && window.AppData.operationWages) {
             const key = `${product}___${op}`;
+            const canonicalP = window.getCanonicalProductKey(product);
+            const canonicalKey = `${canonicalP}___${op}`;
+
             if (window.AppData.operationWages[key]) {
                 unitWage = window.AppData.operationWages[key];
+            } else if (window.AppData.operationWages[canonicalKey]) {
+                unitWage = window.AppData.operationWages[canonicalKey];
             }
         }
 
