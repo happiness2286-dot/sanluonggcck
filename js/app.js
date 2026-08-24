@@ -480,18 +480,23 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMasterDataDatalists();
     }
 
-    // Machine & Product Cascade -> Operation Filtering
+    // Machine & Product Cascade -> Operation Filtering & Touch Pill Buttons
     function populateOperationsForProductAndMachine(ignoreMachineFilter = false) {
         const selectedProduct = productSelect ? productSelect.value : '';
         const selectedMachine = machineSelect ? machineSelect.value : '';
         const customOpBox = document.getElementById('customOperationBox');
+        const opContainer = document.getElementById('operationContainer');
         
         if (customOpBox) customOpBox.style.display = 'none';
 
         operationSelect.innerHTML = '<option value="">-- Chọn Nguyên công --</option>';
+        if (opContainer) opContainer.innerHTML = '';
         wipStockBadge.style.display = 'none';
 
-        if (!selectedProduct) return;
+        if (!selectedProduct) {
+            if (opContainer) opContainer.innerHTML = '<p style="font-size: 12px; color: #94a3b8; grid-column: 1/-1; margin: 4px 0;">(Vui lòng chọn Khách hàng & Sản phẩm ở trên trước)</p>';
+            return;
+        }
 
         const targetClean = window.cleanKey(selectedProduct);
         let ops = [];
@@ -556,6 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // 1. Populate Dropdown Select
         sortedOps.forEach(opItem => {
             const opt = document.createElement('option');
             opt.value = opItem.op;
@@ -563,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
             operationSelect.appendChild(opt);
         });
 
-        // Add option for manual custom NC entry
+        // Add option for manual custom NC entry in dropdown
         const optCustom = document.createElement('option');
         optCustom.value = '__CUSTOM_OP__';
         optCustom.textContent = '✏️ + Thêm / Nhập Nguyên Công Mới (Thủ công)...';
@@ -571,14 +577,64 @@ document.addEventListener('DOMContentLoaded', () => {
         optCustom.style.color = '#34d399';
         operationSelect.appendChild(optCustom);
 
+        // 2. Populate Touch Pill Buttons Container (#operationContainer)
+        if (opContainer) {
+            sortedOps.forEach(opItem => {
+                const btn = document.createElement('div');
+                btn.className = 'pill-btn';
+                btn.style.padding = '10px 8px';
+                btn.style.fontSize = '12.5px';
+                btn.style.lineHeight = '1.3';
+                btn.style.display = 'flex';
+                btn.style.alignItems = 'center';
+                btn.style.justifyContent = 'center';
+                btn.style.minHeight = '44px';
+                btn.textContent = opItem.op;
+                btn.setAttribute('data-op', opItem.op);
+
+                btn.addEventListener('click', function() {
+                    opContainer.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    operationSelect.value = opItem.op;
+                    operationSelect.dispatchEvent(new Event('change'));
+                });
+
+                opContainer.appendChild(btn);
+            });
+
+            // Add visual pill button for custom NC entry
+            const btnCustomPill = document.createElement('div');
+            btnCustomPill.className = 'pill-btn';
+            btnCustomPill.style.borderColor = 'rgba(52, 211, 153, 0.5)';
+            btnCustomPill.style.color = '#34d399';
+            btnCustomPill.style.padding = '10px 8px';
+            btnCustomPill.style.fontSize = '12px';
+            btnCustomPill.style.minHeight = '44px';
+            btnCustomPill.style.display = 'flex';
+            btnCustomPill.style.alignItems = 'center';
+            btnCustomPill.style.justifyContent = 'center';
+            btnCustomPill.textContent = '✏️ + Nhập NC Mới';
+            btnCustomPill.setAttribute('data-op', '__CUSTOM_OP__');
+
+            btnCustomPill.addEventListener('click', function() {
+                opContainer.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                operationSelect.value = '__CUSTOM_OP__';
+                operationSelect.dispatchEvent(new Event('change'));
+            });
+            opContainer.appendChild(btnCustomPill);
+        }
+
         updateWageDisplay();
     }
 
     // Customer -> Product Cascade
     customerSelect.addEventListener('change', (e) => {
         const selectedCustomer = e.target.value;
+        const opContainer = document.getElementById('operationContainer');
         productSelect.innerHTML = '<option value="">-- Chọn Sản phẩm --</option>';
         operationSelect.innerHTML = '<option value="">-- Chọn Nguyên công --</option>';
+        if (opContainer) opContainer.innerHTML = '<p style="font-size: 12px; color: #94a3b8; grid-column: 1/-1; margin: 4px 0;">(Vui lòng chọn Sản phẩm trước)</p>';
         wipStockBadge.style.display = 'none';
 
         if (selectedCustomer) {
@@ -612,6 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const op = operationSelect.value;
         const customOpBox = document.getElementById('customOperationBox');
         const customOpInput = document.getElementById('customOperationInput');
+        const opContainer = document.getElementById('operationContainer');
 
         if (op === '__SHOW_ALL__') {
             populateOperationsForProductAndMachine(true);
@@ -623,6 +680,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (customOpInput) customOpInput.focus();
         } else {
             if (customOpBox) customOpBox.style.display = 'none';
+        }
+
+        // Sync active state in touch pill buttons (#operationContainer)
+        if (opContainer) {
+            const pills = opContainer.querySelectorAll('.pill-btn');
+            pills.forEach(p => {
+                const pOp = p.getAttribute('data-op');
+                if (pOp === op) {
+                    p.classList.add('active');
+                } else {
+                    p.classList.remove('active');
+                }
+            });
         }
 
         if (prod && op && op !== '__CUSTOM_OP__' && op !== '__SHOW_ALL__') {
