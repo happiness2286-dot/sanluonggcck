@@ -431,6 +431,512 @@ window.INITIAL_DATA = {
     ]
 },
     operationsByProduct: {
+    "Block L (N600KN) 013-20768L": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Pattern Drawing No 2CG00820": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Taytona Drawing No 2CG00382": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Taytona Drawing No 2CG00820": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Búa đập- HC-G-2015": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Conveying element GS; end zone of the grate (1561x300, mã bv693)": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Conveying element GS; initial zone of the grate (1535x300 mã 056)": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "4-210658-1": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "4-210658-2": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "493623-1": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "496025-1": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Bánh răng bị động MSB 2021 (Φ1008x150)": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Con lăn lò NLLT ký hiệu số 1": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Gối truyền động 1": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Gối truyền động 2": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Thanh lắc": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Cánh xoắn côn 70.5/114.3-A330- Bịt đầu": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Cánh xoắn côn 74.3/114.3-A330": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Cánh xoắn côn 89/114-A330": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Mẫu kéo nén Win Win": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Đĩa búa 2000x2000 D750- DP (Đĩa 1 bên moay ơ 260/185 dày 93)": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Đĩa búa 750 búa 2.2x2 mét (Đĩa 1 bên moay ơ 265/195 dày 98)": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
+    "Đĩa búa 750 búa 2.2x2 mét (Đĩa 2 bên moay ơ 265/195 dày 126)": [
+        {
+                "op": "NC1: Tiện thô phay mặt",
+                "time_s": 2700,
+                "stage": "1"
+        },
+        {
+                "op": "NC2: Phay CNC rãnh",
+                "time_s": 3600,
+                "stage": "2"
+        },
+        {
+                "op": "NC3: Khoan / Ta-rô lỗ tâm",
+                "time_s": 1800,
+                "stage": "3"
+        },
+        {
+                "op": "NC4: Mài hoàn thiện",
+                "time_s": 2400,
+                "stage": "End"
+        }
+],
     "Pattern Drawing No 2CG00382": [
         {
             "op": "G/c Tiện NC2 tiện lỗ",

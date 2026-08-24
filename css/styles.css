@@ -352,11 +352,15 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* Downtime Pill Grid */
-.pill-grid {
+.pill-grid, #operationContainer {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 8px;
+    margin-top: 10px;
     margin-bottom: 12px;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
 }
 
 .pill-btn {
