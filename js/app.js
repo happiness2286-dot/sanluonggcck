@@ -1530,12 +1530,52 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
                         const sheet = workbook.Sheets[sheetName];
                         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
                         
+                        let custCol = 0, prodCol = 1, opCol = 2, timeCol = 3, wageCol = 4, machineCol = 5;
+
                         rows.forEach((row, idx) => {
-                            if (idx >= 1 && row.length >= 3) {
-                                const cust = row[0] ? String(row[0]).trim() : 'Khách hàng mới';
-                                const prod = row[1] ? String(row[1]).trim() : '';
-                                const op = row[2] ? String(row[2]).trim() : '';
-                                const wage = row[3] ? parseFloat(row[3]) : 45000;
+                            if (!row || row.length === 0) return;
+
+                            // Dynamic header column detection
+                            if (idx === 0) {
+                                row.forEach((cellText, cIdx) => {
+                                    const str = String(cellText || '').toLowerCase().trim();
+                                    if (str.includes('khách hàng') || str.includes('customer')) custCol = cIdx;
+                                    else if (str.includes('sản phẩm') || str.includes('product')) prodCol = cIdx;
+                                    else if (str.includes('nguyên công') || str.includes('công đoạn') || str.includes('op')) opCol = cIdx;
+                                    else if (str.includes('định mức') || str.includes('giây') || str.includes('thời gian')) timeCol = cIdx;
+                                    else if (str.includes('lương') || str.includes('khoán') || str.includes('giá')) wageCol = cIdx;
+                                    else if (str.includes('máy') || str.includes('machine')) machineCol = cIdx;
+                                });
+                                return;
+                            }
+
+                            if (row.length >= 3) {
+                                const cust = row[custCol] ? String(row[custCol]).trim() : 'Khách hàng mới';
+                                const prod = row[prodCol] ? String(row[prodCol]).trim() : '';
+                                const op = row[opCol] ? String(row[opCol]).trim() : '';
+
+                                // Parse Time in seconds (Column D)
+                                let timeSec = 1800;
+                                if (row[timeCol] !== undefined && row[timeCol] !== null && row[timeCol] !== '') {
+                                    const rawT = parseFloat(String(row[timeCol]).replace(/,/g, ''));
+                                    if (!isNaN(rawT) && rawT > 0) timeSec = rawT;
+                                }
+
+                                // Parse Wage in VND (Column E)
+                                let wage = 0;
+                                if (row[wageCol] !== undefined && row[wageCol] !== null && row[wageCol] !== '') {
+                                    const rawW = parseFloat(String(row[wageCol]).replace(/,/g, ''));
+                                    if (!isNaN(rawW) && rawW > 0) wage = rawW;
+                                }
+
+                                // Auto-compute Piece-Rate Wage if left empty in Excel: 60,000 VNĐ / hour
+                                if (wage <= 0 && timeSec > 0) {
+                                    wage = Math.round((timeSec / 3600) * 60000);
+                                }
+                                if (wage <= 0) wage = 35000;
+
+                                // Parse Machine (Column F)
+                                const defaultMachine = row[machineCol] ? String(row[machineCol]).trim() : '';
 
                                 if (prod && op) {
                                     const canonicalCust = window.getCanonicalCustomerKey(cust);
@@ -1549,8 +1589,12 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
                                     if (!window.AppData.operationsByProduct[canonicalProd]) window.AppData.operationsByProduct[canonicalProd] = [];
                                     
                                     const targetArr = window.AppData.operationsByProduct[canonicalProd];
-                                    if (!targetArr.some(o => (typeof o === 'string' ? o : o.op) === op)) {
-                                        targetArr.push({ op: op, time_s: 1800 });
+                                    const existingOp = targetArr.find(o => (typeof o === 'string' ? o : o.op) === op);
+                                    if (!existingOp) {
+                                        targetArr.push({ op: op, time_s: timeSec, machine: defaultMachine });
+                                    } else if (typeof existingOp === 'object') {
+                                        existingOp.time_s = timeSec;
+                                        if (defaultMachine) existingOp.machine = defaultMachine;
                                     }
                                     if (!window.AppData.operationWages) window.AppData.operationWages = {};
                                     window.AppData.operationWages[`${canonicalProd}___${op}`] = wage;
@@ -1564,7 +1608,7 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
                     localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
                     initDropdowns();
                     pushMasterDataToCloud();
-                    showToast(`📥 ĐÃ NẠP THÀNH CÔNG ${countAdded} NGUYÊN CÔNG/SẢN PHẨM MỚI TỪ FILE EXCEL!`, 'success');
+                    showToast(`📥 ĐÃ NẠP THÀNH CÔNG ${countAdded} NGUYÊN CÔNG TỪ EXCEL (ĐÃ CẬP NHẬT LƯƠNG KHOÁN & ĐỊNH MỨC)!`, 'success');
                 } catch (err) {
                     showToast('Lỗi đọc file Excel: ' + err.message, 'danger');
                 }
