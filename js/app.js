@@ -1720,6 +1720,8 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
         document.getElementById('statTotalHuy').textContent = totalHuy.toLocaleString();
         document.getElementById('statTotalDowntime').textContent = `${totalDowntime} phút`;
 
+        renderWipProgressTable();
+
         const tbody = document.getElementById('historyLogTbody');
         if (tbody) {
             tbody.innerHTML = '';
@@ -1750,6 +1752,102 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
                 tbody.appendChild(tr);
             });
         }
+    }
+
+    // Render Realtime WIP Progress Table (Weighted completion % per product)
+    function renderWipProgressTable() {
+        const tbody = document.getElementById('wipProgressTbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (!window.AppData || !window.AppData.operationsByProduct) return;
+
+        const logs = window.AppData.historyLogs || [];
+
+        // Group logs by product
+        const completedMap = {}; // { prodClean: { opClean: totalQty } }
+        logs.forEach(l => {
+            const pClean = window.cleanKey(l.product);
+            const opClean = window.cleanKey(l.op);
+            if (!completedMap[pClean]) completedMap[pClean] = {};
+            if (!completedMap[pClean][opClean]) completedMap[pClean][opClean] = 0;
+            completedMap[pClean][opClean] += (l.qty_dat || 0);
+        });
+
+        // Loop over products
+        const products = Object.keys(window.AppData.operationsByProduct);
+        products.forEach(prodName => {
+            const ops = window.AppData.operationsByProduct[prodName];
+            if (!Array.isArray(ops) || ops.length === 0) return;
+
+            // Find customer
+            let custName = 'Khách hàng';
+            if (window.AppData.productsByCustomer) {
+                Object.keys(window.AppData.productsByCustomer).forEach(c => {
+                    const arr = window.AppData.productsByCustomer[c];
+                    if (Array.isArray(arr) && arr.some(p => window.cleanKey(p) === window.cleanKey(prodName))) {
+                        custName = c;
+                    }
+                });
+            }
+
+            const pClean = window.cleanKey(prodName);
+            const prodLogs = completedMap[pClean] || {};
+
+            let totalNormSec = 0;
+            let completedNormSec = 0;
+            let finishedOpsCount = 0;
+            let opProgressBadges = [];
+
+            ops.forEach((opObj, idx) => {
+                const opName = typeof opObj === 'string' ? opObj : (opObj ? opObj.op : '');
+                const timeSec = typeof opObj === 'object' && opObj.time_s ? opObj.time_s : 1800;
+                totalNormSec += timeSec;
+
+                const doneQty = prodLogs[window.cleanKey(opName)] || 0;
+                if (doneQty > 0) {
+                    completedNormSec += Math.min(1, doneQty) * timeSec; // Normalized per unit batch
+                    finishedOpsCount++;
+                    opProgressBadges.push(`<span class="badge badge-success" style="font-size:10px; margin:2px;">NC${idx+1}: ${doneQty} SP</span>`);
+                } else {
+                    opProgressBadges.push(`<span style="font-size:10px; color:#64748b; margin:2px;">NC${idx+1}: 0</span>`);
+                }
+            });
+
+            const percent = totalNormSec > 0 ? Math.min(100, Math.round((completedNormSec / totalNormSec) * 100)) : 0;
+            
+            let statusColor = '#60a5fa';
+            let statusText = '🟡 Đang gia công';
+            if (percent === 100) {
+                statusColor = '#34d399';
+                statusText = '🟢 Hoàn thành 100%';
+            } else if (percent === 0) {
+                statusColor = '#94a3b8';
+                statusText = '⚪ Chưa sản xuất';
+            } else {
+                statusColor = '#fbbf24';
+                statusText = `🟡 Hoàn thành ${finishedOpsCount}/${ops.length} NC`;
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${custName}</strong></td>
+                <td><span style="color:#60a5fa; font-weight:700;">${prodName}</span> <br><small style="color:#94a3b8;">(${ops.length} nguyên công)</small></td>
+                <td><strong>${Math.round(totalNormSec/60)} phút</strong> <br><small style="color:#64748b;">(${totalNormSec}s)</small></td>
+                <td>${opProgressBadges.join(' ')}</td>
+                <td style="min-width: 140px;">
+                    <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
+                        <span style="color:${statusColor}; font-weight:bold;">${percent}%</span>
+                        <span style="color:#94a3b8;">${finishedOpsCount}/${ops.length} CĐ</span>
+                    </div>
+                    <div style="background:#1e293b; height:8px; border-radius:4px; overflow:hidden;">
+                        <div style="background:${statusColor}; height:100%; width:${percent}%; transition:width 0.5s;"></div>
+                    </div>
+                </td>
+                <td><span style="color:${statusColor}; font-weight:600; font-size:12px;">${statusText}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
 
     // 16. Toast Helper

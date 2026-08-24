@@ -477,7 +477,31 @@ NC4: Mài hoàn thiện | 2400 | 30000"></textarea>
                 </div>
                 <p style="font-size: 11px; color: #94a3b8; margin-top: 6px;">
                     *Nhập Web App URL sau khi triển khai Apps Script. Dữ liệu báo cáo của công nhân sẽ tự động đồng bộ lên Google Sheets ngay lập tức.
-                </p>
+        <!-- Realtime WIP Progress Tracking Card -->
+        <div class="card">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>📊 BẢNG QUẢN LÝ TIẾN ĐỘ WIP & % HOÀN THÀNH SẢN PHẨM (TRỌNG SỐ ĐỊNH MỨC)</span>
+                <span class="icon-badge" style="background: rgba(96, 165, 250, 0.2); color: #60a5fa;">REALTIME WIP</span>
+            </div>
+            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+                *Tính toán % hoàn thành tổng thể sản phẩm theo định mức thời gian (s) từng công đoạn. Tự động nhảy số liệu khi công nhân báo cáo.
+            </p>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Khách Hàng</th>
+                            <th>Sản Phẩm & Quy Trình</th>
+                            <th>Định Mức Tổng</th>
+                            <th>Tiến Độ Công Đoạn Đã Hoàn Thành</th>
+                            <th>% Hoàn Thành Tổng Thể</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="wipProgressTbody">
+                        <!-- Populated dynamically by JS -->
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -616,9 +640,9 @@ NC4: Mài hoàn thiện | 2400 | 30000"></textarea>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="js/data.js?v=20260824_1617"></script>
-    <script src="js/qr-scanner.js?v=20260824_1617"></script>
-    <script src="js/app.js?v=20260824_1617"></script>
+    <script src="js/data.js?v=20260824_1635"></script>
+    <script src="js/qr-scanner.js?v=20260824_1635"></script>
+    <script src="js/app.js?v=20260824_1635"></script>
 
 </body>
 </html>
