@@ -71,6 +71,8 @@ window.INITIAL_DATA = {
         "Tấm ốp bảo vệ (U-profile cover (BV 3.233336)"
     ],
     "Hải- Vinh Quảng Ninh": [
+        "Bộ rulo máy nghiền sơ cấp: Bích rulo (φ500x110) 1T",
+        "Bộ rulo máy nghiền sơ cấp: Thân rồ to (φ820x890)",
         "Ống bạc chặn D174x428",
         "Đầu đùn",
         "Đầu đùn bậc thềm",
@@ -377,7 +379,7 @@ window.INITIAL_DATA = {
         "Pin for conveying elements (1 Bộ= 1 chốt +1 vòng đệm)",
         "High-temperature nozzle NC 500-0o",
         "High-temperature nozzle NC Φ138/568",
-        "Sealing trip, below",
+        "Sealing strip, below",
         "Sealing strip, above"
     ],
     "Luợng- KS Tường Long": [
@@ -431,6 +433,75 @@ window.INITIAL_DATA = {
     ]
 },
     operationsByProduct: {
+    "Bộ rulo máy nghiền sơ cấp: Bích rulo (φ500x110) 1T": [
+        {
+                "op": "G/c Nc1 tiện Ht (Ø500/250mm)",
+                "time_s": 13500,
+                "machine": "Máy tiện FUJI"
+        },
+        {
+                "op": "G/c Nc2 tiện ht (Ø500/380/250, Móc lỗ Ø160+0.03)",
+                "time_s": 13500,
+                "machine": "Máy tiện FUJI"
+        },
+        {
+                "op": "G/c Nc3 Khoan ht 12-Ø17/Ø25",
+                "time_s": 27000,
+                "machine": "Máy Khoan cần Yoshida"
+        },
+        {
+                "op": "G/c Nc4 Cắt dây cavet DK7745 (rãnh 32mm)",
+                "time_s": 27000,
+                "machine": "Máy Cắt Dây DK7745"
+        }
+],
+    "Bộ rulo máy nghiền sơ cấp: Thân rồ to (φ820x890)": [
+        {
+                "op": "G/c Nc1 tiện ht L = 690 mm (Mặt đầu 1 & 2)",
+                "time_s": 10800,
+                "machine": "Máy tiện Tiện T1516"
+        },
+        {
+                "op": "G/c Nc2 tiện Ht Ø820 / Ø690 mm",
+                "time_s": 52000,
+                "machine": "Máy tiện Tiện T1517"
+        },
+        {
+                "op": "G/c Nc3 tiện Ht Ø570/220 mm, R20",
+                "time_s": 14400,
+                "machine": "Máy tiện Tiện T1518"
+        },
+        {
+                "op": "G/c Nc4 tiện Ht Ø220 (+0.1 /-0) mm",
+                "time_s": 3600,
+                "machine": "Máy tiện Tiện T1519"
+        },
+        {
+                "op": "G/c Nc5 tiện Ht Ø570/220 mm, R20 đảo đầu",
+                "time_s": 14400,
+                "machine": "Máy tiện Tiện T1520"
+        },
+        {
+                "op": "G/c Nc6 tiện Ht Ø220 (+0.1 /-0) mm đảo đầu",
+                "time_s": 3600,
+                "machine": "Máy tiện Tiện T1521"
+        },
+        {
+                "op": "G/c Nc7 phay mp Ht 8 mặt x (690 x 80 mm)",
+                "time_s": 13500,
+                "machine": "Máy tiện Tiện T1522"
+        },
+        {
+                "op": "G/c Nc8 khoan 40 Lỗ x Ø22 mm",
+                "time_s": 27000,
+                "machine": "Máy Khoan cần Yoshida"
+        },
+        {
+                "op": "G/c Nc9 khoan 12 Lỗ M16 x 2.0 mm",
+                "time_s": 27000,
+                "machine": "Máy Khoan cần Yoshida"
+        }
+],
     "Block L (N600KN) 013-20768L": [
         {
                 "op": "NC1: Tiện thô phay mặt",
@@ -4433,7 +4504,7 @@ window.INITIAL_DATA = {
             "stage": "End"
         }
     ],
-    "Sealing trip, below": [
+    "Sealing strip, below": [
         {
             "op": "G/c phay Mp NC1 Kt 47mm",
             "time_s": 2400,
@@ -4516,6 +4587,12 @@ window.INITIAL_DATA = {
     "Đặng Ngọc Long"
 ],
     machines: [
+        "Máy tiện Tiện T1517",
+        "Máy tiện Tiện T1518",
+        "Máy tiện Tiện T1519",
+        "Máy tiện Tiện T1520",
+        "Máy tiện Tiện T1521",
+        "Máy tiện Tiện T1522",
     "Máy Cắt Dây DK7745",
     "Máy Cắt Dây DK7780",
     "Máy Cắt Dây Podatech",

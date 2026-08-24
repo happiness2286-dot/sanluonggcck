@@ -480,6 +480,19 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMasterDataDatalists();
     }
 
+    // Force Sync Data Button Listener
+    const btnForceSyncData = document.getElementById('btnForceSyncData');
+    if (btnForceSyncData) {
+        btnForceSyncData.addEventListener('click', () => {
+            if (window.INITIAL_DATA) {
+                window.AppData = JSON.parse(JSON.stringify(window.INITIAL_DATA));
+                localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
+                initDropdowns();
+                showToast('🔄 Đã nạp & đồng bộ 100% dữ liệu Sản phẩm & Nguyên công mới nhất!', 'success');
+            }
+        });
+    }
+
     // Machine & Product Cascade -> Operation Filtering & Touch Pill Buttons
     function populateOperationsForProductAndMachine(ignoreMachineFilter = false) {
         const selectedProduct = productSelect ? productSelect.value : '';
