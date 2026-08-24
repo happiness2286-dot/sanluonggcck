@@ -2033,6 +2033,11 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
 
     // 15. Admin Dashboard Rendering
     function renderAdminDashboard() {
+        if (!window.AppData) window.AppData = {};
+        if (!window.AppData.historyLogs || !Array.isArray(window.AppData.historyLogs)) {
+            window.AppData.historyLogs = [];
+        }
+
         const logs = window.AppData.historyLogs;
         
         let totalDat = 0;
@@ -2041,19 +2046,34 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
         let totalDowntime = 0;
 
         logs.forEach(l => {
-            totalDat += (l.qty_dat || 0);
-            totalXuLy += (l.qty_xuly || 0);
-            totalHuy += (l.qty_huy || 0);
-            totalDowntime += (l.downtime_min || 0);
+            if (l) {
+                totalDat += (l.qty_dat || 0);
+                totalXuLy += (l.qty_xuly || 0);
+                totalHuy += (l.qty_huy || 0);
+                totalDowntime += (l.downtime_min || 0);
+            }
         });
 
-        document.getElementById('statTotalDat').textContent = totalDat.toLocaleString();
-        document.getElementById('statTotalXuLy').textContent = totalXuLy.toLocaleString();
-        document.getElementById('statTotalHuy').textContent = totalHuy.toLocaleString();
-        document.getElementById('statTotalDowntime').textContent = `${totalDowntime} phút`;
+        const statDat = document.getElementById('statTotalDat');
+        if (statDat) statDat.textContent = totalDat.toLocaleString();
+        const statXuLy = document.getElementById('statTotalXuLy');
+        if (statXuLy) statXuLy.textContent = totalXuLy.toLocaleString();
+        const statHuy = document.getElementById('statTotalHuy');
+        if (statHuy) statHuy.textContent = totalHuy.toLocaleString();
+        const statDown = document.getElementById('statTotalDowntime');
+        if (statDown) statDown.textContent = `${totalDowntime} phút`;
 
-        renderOrderManagementTable();
-        renderWipProgressTable();
+        try {
+            renderOrderManagementTable();
+        } catch (eOrder) {
+            console.error('Lỗi renderOrderManagementTable:', eOrder);
+        }
+
+        try {
+            renderWipProgressTable();
+        } catch (eWip) {
+            console.error('Lỗi renderWipProgressTable:', eWip);
+        }
 
         const tbody = document.getElementById('historyLogTbody');
         if (tbody) {
