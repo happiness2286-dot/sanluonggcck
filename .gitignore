@@ -1,0 +1,16 @@
+# Installer & binaries
+Git-*.exe
+*.exe
+
+# Temporary Excel files
+~$*.xlsx
+~$*.xlsm
+
+# Logs & temp files
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
