@@ -708,7 +708,28 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // Auto-select Machine if default machine is defined for this operation
         if (prod && op && op !== '__CUSTOM_OP__' && op !== '__SHOW_ALL__') {
+            const canonicalProd = window.getCanonicalProductKey(prod);
+            const opsArr = window.AppData.operationsByProduct ? window.AppData.operationsByProduct[canonicalProd] : null;
+            if (opsArr && Array.isArray(opsArr)) {
+                const foundOpObj = opsArr.find(o => (typeof o === 'object' && o ? o.op : o) === op);
+                if (foundOpObj && typeof foundOpObj === 'object' && foundOpObj.machine) {
+                    const targetMachine = foundOpObj.machine;
+                    // Check if machine exists in select, if not add it
+                    let matchOpt = Array.from(machineSelect.options).find(opt => opt.value === targetMachine || window.cleanKey(opt.value) === window.cleanKey(targetMachine));
+                    if (!matchOpt && targetMachine) {
+                        matchOpt = document.createElement('option');
+                        matchOpt.value = targetMachine;
+                        matchOpt.textContent = targetMachine;
+                        machineSelect.appendChild(matchOpt);
+                    }
+                    if (matchOpt) {
+                        machineSelect.value = matchOpt.value;
+                    }
+                }
+            }
+
             const availableWip = Math.floor(10 + Math.random() * 40);
             wipStockCount.textContent = availableWip;
             wipStockBadge.style.display = 'inline-flex';
