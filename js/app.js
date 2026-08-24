@@ -12,6 +12,42 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             window.AppData = JSON.parse(savedData);
             window.AppData.googleScriptUrl = DEFAULT_GOOGLE_SCRIPT_URL;
+
+            // Auto-sync missing master data from INITIAL_DATA into AppData for old products
+            if (window.INITIAL_DATA) {
+                if (window.INITIAL_DATA.customers) {
+                    if (!window.AppData.customers) window.AppData.customers = [];
+                    window.INITIAL_DATA.customers.forEach(c => {
+                        if (!window.AppData.customers.includes(c)) window.AppData.customers.push(c);
+                    });
+                }
+                if (window.INITIAL_DATA.productsByCustomer) {
+                    if (!window.AppData.productsByCustomer) window.AppData.productsByCustomer = {};
+                    Object.keys(window.INITIAL_DATA.productsByCustomer).forEach(cust => {
+                        if (!window.AppData.productsByCustomer[cust]) {
+                            window.AppData.productsByCustomer[cust] = window.INITIAL_DATA.productsByCustomer[cust];
+                        } else {
+                            window.INITIAL_DATA.productsByCustomer[cust].forEach(p => {
+                                if (!window.AppData.productsByCustomer[cust].includes(p)) {
+                                    window.AppData.productsByCustomer[cust].push(p);
+                                }
+                            });
+                        }
+                    });
+                }
+                if (window.INITIAL_DATA.operationsByProduct) {
+                    if (!window.AppData.operationsByProduct) window.AppData.operationsByProduct = {};
+                    Object.keys(window.INITIAL_DATA.operationsByProduct).forEach(prod => {
+                        if (!window.AppData.operationsByProduct[prod] || window.AppData.operationsByProduct[prod].length === 0) {
+                            window.AppData.operationsByProduct[prod] = window.INITIAL_DATA.operationsByProduct[prod];
+                        }
+                    });
+                }
+                if (window.INITIAL_DATA.operationWages) {
+                    if (!window.AppData.operationWages) window.AppData.operationWages = {};
+                    Object.assign(window.AppData.operationWages, window.INITIAL_DATA.operationWages);
+                }
+            }
         } catch (e) {
             window.AppData = window.INITIAL_DATA;
         }
@@ -19,6 +55,31 @@ document.addEventListener('DOMContentLoaded', () => {
         window.AppData = window.INITIAL_DATA;
         localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
     }
+
+    // Helper: Find exact or canonical key for Products & Customers flexible lookup
+    window.getCanonicalProductKey = function(productName) {
+        if (!productName) return '';
+        const trimP = productName.trim();
+        if (!window.AppData || !window.AppData.operationsByProduct) return trimP;
+        if (window.AppData.operationsByProduct[trimP]) return trimP;
+        const cleanTarget = trimP.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const foundKey = Object.keys(window.AppData.operationsByProduct).find(k => 
+            k.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanTarget
+        );
+        return foundKey || trimP;
+    };
+
+    window.getCanonicalCustomerKey = function(customerName) {
+        if (!customerName) return '';
+        const trimC = customerName.trim();
+        if (!window.AppData || !window.AppData.productsByCustomer) return trimC;
+        if (window.AppData.productsByCustomer[trimC]) return trimC;
+        const cleanCust = trimC.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const foundKey = Object.keys(window.AppData.productsByCustomer).find(k => 
+            k.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanCust
+        );
+        return foundKey || trimC;
+    };
 
     // Ensure userAccounts is guaranteed to be present and populated
     if (!window.AppData.userAccounts || window.AppData.userAccounts.length === 0) {
@@ -399,12 +460,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!selectedProduct) return;
 
-        let ops = window.AppData.operationsByProduct[selectedProduct];
-        if (!ops) {
-            // Case-insensitive & Whitespace-flexible key lookup
+        const canonicalProdKey = window.getCanonicalProductKey(selectedProduct);
+        let ops = [];
+
+        if (window.AppData && window.AppData.operationsByProduct) {
+            // Find all matching keys (exact or fuzzy) and merge their operations so no NC is lost
             const cleanTarget = selectedProduct.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const foundKey = Object.keys(window.AppData.operationsByProduct).find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanTarget);
-            if (foundKey) ops = window.AppData.operationsByProduct[foundKey];
+            Object.keys(window.AppData.operationsByProduct).forEach(k => {
+                if (k.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanTarget) {
+                    const rawList = window.AppData.operationsByProduct[k];
+                    if (Array.isArray(rawList)) {
+                        rawList.forEach(item => {
+                            const opName = typeof item === 'string' ? item : (item ? item.op : '');
+                            const opTime = typeof item === 'object' && item.time_s ? item.time_s : 1800;
+                            if (opName && !ops.some(o => o.op === opName)) {
+                                ops.push({ op: opName, time_s: opTime });
+                            }
+                        });
+                    }
+                }
+            });
         }
 
         if (!ops || ops.length === 0) {
@@ -422,58 +497,43 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
         }
 
-        // Machine Filtering Logic (Support NC1 to NC99 matching regex without restricting high NC numbers)
-        let filteredOps = ops;
+        // Sort machine-relevant operations to the top without hiding non-matching operations
+        let sortedOps = [...ops];
         if (selectedMachine && !ignoreMachineFilter) {
             const m = selectedMachine.toLowerCase();
-            if (m.includes('tiện')) {
-                const sub = ops.filter(o => {
-                    const opLower = o.op.toLowerCase();
-                    return opLower.includes('tiện') || opLower.includes('cưa') || /nc\d+/i.test(o.op) || opLower.includes('thô') || opLower.includes('hoàn thiện');
-                });
-                if (sub.length > 0) filteredOps = sub;
-            } else if (m.includes('phay')) {
-                const sub = ops.filter(o => {
-                    const opLower = o.op.toLowerCase();
-                    return opLower.includes('phay') || opLower.includes('khoan') || opLower.includes('rãnh') || opLower.includes('mp') || /nc\d+/i.test(o.op) || opLower.includes('bản vẽ');
-                });
-                if (sub.length > 0) filteredOps = sub;
-            } else if (m.includes('mài')) {
-                const sub = ops.filter(o => {
-                    const opLower = o.op.toLowerCase();
-                    return opLower.includes('mài') || opLower.includes('mặt') || opLower.includes('phẳng') || /nc\d+/i.test(o.op);
-                });
-                if (sub.length > 0) filteredOps = sub;
-            } else if (m.includes('cắt dây') || m.includes('podatech')) {
-                const sub = ops.filter(o => {
-                    const opLower = o.op.toLowerCase();
-                    return opLower.includes('cắt') || opLower.includes('dây') || /nc\d+/i.test(o.op);
-                });
-                if (sub.length > 0) filteredOps = sub;
-            }
+            sortedOps.sort((a, b) => {
+                const aName = (a.op || '').toLowerCase();
+                const bName = (b.op || '').toLowerCase();
+                let aMatch = false;
+                let bMatch = false;
+                if (m.includes('tiện')) {
+                    aMatch = aName.includes('tiện') || aName.includes('cưa') || aName.includes('thô') || aName.includes('hoàn thiện');
+                    bMatch = bName.includes('tiện') || bName.includes('cưa') || bName.includes('thô') || bName.includes('hoàn thiện');
+                } else if (m.includes('phay')) {
+                    aMatch = aName.includes('phay') || aName.includes('khoan') || aName.includes('rãnh') || aName.includes('mp');
+                    bMatch = bName.includes('phay') || bName.includes('khoan') || bName.includes('rãnh') || bName.includes('mp');
+                } else if (m.includes('mài')) {
+                    aMatch = aName.includes('mài') || aName.includes('mặt') || aName.includes('phẳng');
+                    bMatch = bName.includes('mài') || bName.includes('mặt') || bName.includes('phẳng');
+                } else if (m.includes('cắt dây') || m.includes('podatech')) {
+                    aMatch = aName.includes('cắt') || aName.includes('dây');
+                    bMatch = bName.includes('cắt') || bName.includes('dây');
+                }
+                return (bMatch ? 1 : 0) - (aMatch ? 1 : 0);
+            });
         }
 
-        filteredOps.forEach(opItem => {
+        sortedOps.forEach(opItem => {
             const opt = document.createElement('option');
             opt.value = opItem.op;
             opt.textContent = `${opItem.op} (${opItem.time_s}s)`;
             operationSelect.appendChild(opt);
         });
 
-        // Add option to show all operations if machine filter reduced the list
-        if (filteredOps.length < ops.length && !ignoreMachineFilter) {
-            const optAll = document.createElement('option');
-            optAll.value = '__SHOW_ALL__';
-            optAll.textContent = `📋 -- Hiển thị tất cả ${ops.length} Nguyên công của sản phẩm --`;
-            optAll.style.fontWeight = 'bold';
-            optAll.style.color = '#60a5fa';
-            operationSelect.appendChild(optAll);
-        }
-
         // Add option for manual custom NC entry
         const optCustom = document.createElement('option');
         optCustom.value = '__CUSTOM_OP__';
-        optCustom.textContent = '✏️ -- Nhập Nguyên Công Bổ Sung / Thủ Công --';
+        optCustom.textContent = '✏️ + Thêm / Nhập Nguyên Công Mới (Thủ công)...';
         optCustom.style.fontWeight = 'bold';
         optCustom.style.color = '#34d399';
         operationSelect.appendChild(optCustom);
@@ -778,6 +838,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (customOpInput) customOpInput.focus();
                 return;
             }
+            // Permanently save custom operation to product so it becomes selectable for everyone
+            const canonicalP = window.getCanonicalProductKey(product);
+            if (!window.AppData.operationsByProduct) window.AppData.operationsByProduct = {};
+            if (!window.AppData.operationsByProduct[canonicalP]) {
+                window.AppData.operationsByProduct[canonicalP] = [];
+            }
+            if (!window.AppData.operationsByProduct[canonicalP].some(o => (typeof o === 'string' ? o : o.op) === op)) {
+                window.AppData.operationsByProduct[canonicalP].push({ op: op, time_s: 2700 });
+            }
+            if (!window.AppData.operationWages) window.AppData.operationWages = {};
+            window.AppData.operationWages[`${canonicalP}___${op}`] = 45000;
+            localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
         } else if (selectedOpVal === '__SHOW_ALL__' || !selectedOpVal) {
             showToast('Vui lòng chọn một Nguyên công cụ thể hoặc chọn Nhập thủ công!', 'danger');
             return;
@@ -1196,23 +1268,26 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
                 return;
             }
 
+            const canonicalCust = window.getCanonicalCustomerKey(customer);
+            const canonicalProd = window.getCanonicalProductKey(product);
+
             // Update Customers list
-            if (!window.AppData.customers.includes(customer)) {
-                window.AppData.customers.push(customer);
+            if (!window.AppData.customers.includes(canonicalCust)) {
+                window.AppData.customers.push(canonicalCust);
             }
 
             // Update Products by Customer
             if (!window.AppData.productsByCustomer) window.AppData.productsByCustomer = {};
-            if (!window.AppData.productsByCustomer[customer]) {
-                window.AppData.productsByCustomer[customer] = [];
+            if (!window.AppData.productsByCustomer[canonicalCust]) {
+                window.AppData.productsByCustomer[canonicalCust] = [];
             }
-            if (!window.AppData.productsByCustomer[customer].includes(product)) {
-                window.AppData.productsByCustomer[customer].push(product);
+            if (!window.AppData.productsByCustomer[canonicalCust].includes(canonicalProd)) {
+                window.AppData.productsByCustomer[canonicalCust].push(canonicalProd);
             }
 
             if (!window.AppData.operationsByProduct) window.AppData.operationsByProduct = {};
-            if (!window.AppData.operationsByProduct[product]) {
-                window.AppData.operationsByProduct[product] = [];
+            if (!window.AppData.operationsByProduct[canonicalProd]) {
+                window.AppData.operationsByProduct[canonicalProd] = [];
             }
             if (!window.AppData.operationWages) window.AppData.operationWages = {};
 
@@ -1228,13 +1303,15 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
                     const timeSec = parts[1] ? (parseFloat(parts[1].trim()) || 1800) : 1800;
                     const wageRate = parts[2] ? (parseFloat(parts[2].trim()) || 45000) : 45000;
 
-                    const existingOp = window.AppData.operationsByProduct[product].find(o => o.op === opName);
+                    const targetArr = window.AppData.operationsByProduct[canonicalProd];
+                    const existingOp = targetArr.find(o => (typeof o === 'string' ? o : o.op) === opName);
                     if (!existingOp) {
-                        window.AppData.operationsByProduct[product].push({ op: opName, time_s: timeSec });
-                    } else {
+                        targetArr.push({ op: opName, time_s: timeSec });
+                    } else if (typeof existingOp === 'object') {
                         existingOp.time_s = timeSec;
                     }
 
+                    window.AppData.operationWages[`${canonicalProd}___${opName}`] = wageRate;
                     window.AppData.operationWages[`${product}___${opName}`] = wageRate;
                     addedCount++;
                 }
@@ -1244,7 +1321,7 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
             initDropdowns();
             pushMasterDataToCloud();
 
-            showToast(`⚙️ Đã lưu thành công Cụm ${addedCount} Nguyên công cho Sản phẩm "${product}"!`, 'success');
+            showToast(`⚙️ Đã lưu thành công Cụm ${addedCount} Nguyên công cho Sản phẩm "${canonicalProd}"!`, 'success');
             if (masterProductInput) masterProductInput.value = '';
             if (masterMultiOpsInput) masterMultiOpsInput.value = '';
         });
@@ -1341,17 +1418,22 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
                                 const wage = row[3] ? parseFloat(row[3]) : 45000;
 
                                 if (prod && op) {
-                                    if (!window.AppData.customers.includes(cust)) window.AppData.customers.push(cust);
+                                    const canonicalCust = window.getCanonicalCustomerKey(cust);
+                                    const canonicalProd = window.getCanonicalProductKey(prod);
+
+                                    if (!window.AppData.customers.includes(canonicalCust)) window.AppData.customers.push(canonicalCust);
                                     if (!window.AppData.productsByCustomer) window.AppData.productsByCustomer = {};
-                                    if (!window.AppData.productsByCustomer[cust]) window.AppData.productsByCustomer[cust] = [];
-                                    if (!window.AppData.productsByCustomer[cust].includes(prod)) window.AppData.productsByCustomer[cust].push(prod);
+                                    if (!window.AppData.productsByCustomer[canonicalCust]) window.AppData.productsByCustomer[canonicalCust] = [];
+                                    if (!window.AppData.productsByCustomer[canonicalCust].includes(canonicalProd)) window.AppData.productsByCustomer[canonicalCust].push(canonicalProd);
                                     if (!window.AppData.operationsByProduct) window.AppData.operationsByProduct = {};
-                                    if (!window.AppData.operationsByProduct[prod]) window.AppData.operationsByProduct[prod] = [];
+                                    if (!window.AppData.operationsByProduct[canonicalProd]) window.AppData.operationsByProduct[canonicalProd] = [];
                                     
-                                    if (!window.AppData.operationsByProduct[prod].find(o => o.op === op)) {
-                                        window.AppData.operationsByProduct[prod].push({ op: op, time_s: 1800 });
+                                    const targetArr = window.AppData.operationsByProduct[canonicalProd];
+                                    if (!targetArr.some(o => (typeof o === 'string' ? o : o.op) === op)) {
+                                        targetArr.push({ op: op, time_s: 1800 });
                                     }
                                     if (!window.AppData.operationWages) window.AppData.operationWages = {};
+                                    window.AppData.operationWages[`${canonicalProd}___${op}`] = wage;
                                     window.AppData.operationWages[`${prod}___${op}`] = wage;
                                     countAdded++;
                                 }
