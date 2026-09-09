@@ -358,15 +358,26 @@ function checkOverdueReports(shiftName) {
       }
     }
 
+    // Danh sách 15 công nhân mặc định từ cơ sở dữ liệu gốc của dự án
+    var DEFAULT_WORKERS = [
+      "Hoàng Ngọc Hà", "Nguyễn Trung Đông", "Phùng Đình Hùng", "Vũ Tiến Thuận",
+      "Nguyễn Mạnh Hà", "Nguyễn Văn Thanh", "Phùng Gia Phúc", "Trần Văn Dũng",
+      "Trần Đăng Ninh", "Phạm Văn Tráng", "Phùng Công Thắng", "Phạm Ngọc Sam",
+      "Trần Văn Quỳnh", "Đinh Văn Nhận", "Đặng Ngọc Long"
+    ];
+
     // Đọc danh sách Công nhân 100% trực tiếp từ Google Sheet "Danh Sách Công Nhân"
     var allWorkers = [];
     var workerSheet = ss.getSheetByName("Danh Sách Công Nhân") || ss.getSheetByName("CongNhan");
 
-    // Nếu chưa có Sheet "Danh Sách Công Nhân", tự động tạo Sheet trống chuẩn mẫu cho Quản đốc nhập tên
+    // Nếu chưa có Sheet "Danh Sách Công Nhân", tự động tạo Sheet chuẩn & điền sẵn 15 công nhân gốc
     if (!workerSheet) {
       workerSheet = ss.insertSheet("Danh Sách Công Nhân");
-      workerSheet.appendRow(["Họ Và Tên Công Nhân", "Bộ Phận / Máy", "Trạng Thái"]);
-      console.log("✅ Đã tự động tạo Sheet 'Danh Sách Công Nhân' trống trên Google Sheets!");
+      workerSheet.appendRow(["Họ Và Tên Công Nhân", "Tài Khoản / Mã", "Trạng Thái"]);
+      DEFAULT_WORKERS.forEach(function (wName, idx) {
+        workerSheet.appendRow([wName, "NV" + (idx + 1 < 10 ? "0" + (idx + 1) : (idx + 1)), "Đang làm"]);
+      });
+      console.log("✅ Đã tự động khởi tạo Sheet 'Danh Sách Công Nhân' với 15 công nhân gốc của dự án!");
     }
 
     // Đọc dữ liệu công nhân từ Sheet "Danh Sách Công Nhân"
@@ -381,10 +392,15 @@ function checkOverdueReports(shiftName) {
       }
     }
 
-    // Nếu chưa có công nhân nào được nhập trên Google Sheet
+    // Nếu Sheet vẫn rỗng (do Quản đốc lỡ xóa hết dòng), dùng mặc định 15 công nhân gốc
     if (allWorkers.length === 0) {
-      console.log("⚠️ Chưa có danh sách công nhân nào trong Sheet 'Danh Sách Công Nhân'. Quản đốc vui lòng điền tên công nhân vào Cột A của Sheet này!");
-      return;
+      allWorkers = DEFAULT_WORKERS.slice();
+      // Tự động điền lại vào Sheet cho Quản đốc
+      if (workerSheet.getLastRow() <= 1) {
+        DEFAULT_WORKERS.forEach(function (wName, idx) {
+          workerSheet.appendRow([wName, "NV" + (idx + 1 < 10 ? "0" + (idx + 1) : (idx + 1)), "Đang làm"]);
+        });
+      }
     }
 
     // Lọc công nhân chưa nộp báo cáo
