@@ -6,7 +6,7 @@ var PRODUCT_FOLDER_ID = ""; // Ví dụ: "1A2b3C4d5E6f7G..." (Để trống hệ
 var SCRAP_FOLDER_ID = "";   // Ví dụ: "9Z8y7X6w5V4u3T..." (Để trống hệ thống tự tạo)
 
 // 🤖 CẤU HÌNH TELEGRAM BOT TỰ ĐỘNG CẢNH BÁO
-var TELEGRAM_BOT_TOKEN = "8871498341:AAFTzNNaCNXZlaTJlh8znudxrYFs69bu74s"; // Dán Token Bot lấy từ @BotFather vào đây (Ví dụ: "123456789:ABCdefGhIJKlmNo...")
+var TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN_HERE"; // Dán Token Bot lấy từ @BotFather vào đây (Ví dụ: "8871498341:AAFTz...")
 var TELEGRAM_CHAT_ID = "-5457065729";   // Dán Chat ID Nhóm Telegram xưởng vào đây (Ví dụ: "-100123456789")
 
 // 🌐 URL Mini App Sản Lượng của bạn (Netlify hoặc GitHub Pages)
