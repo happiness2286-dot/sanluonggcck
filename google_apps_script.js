@@ -461,27 +461,24 @@ function sendTelegramMessage(htmlMessageText) {
     return;
   }
 
-  try {
-    var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/sendMessage";
-    var payload = {
-      "chat_id": TELEGRAM_CHAT_ID.trim(),
-      "text": htmlMessageText,
-      "parse_mode": "HTML",
-      "disable_web_page_preview": false
-    };
+  var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/sendMessage";
+  var payload = {
+    "chat_id": TELEGRAM_CHAT_ID.trim(),
+    "text": htmlMessageText,
+    "parse_mode": "HTML",
+    "disable_web_page_preview": false
+  };
 
-    var options = {
-      "method": "post",
-      "contentType": "application/json",
-      "payload": JSON.stringify(payload),
-      "muteHttpExceptions": true
-    };
+  var options = {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
 
-    var response = UrlFetchApp.fetch(url, options);
-    console.log("📲 Đã gửi cảnh báo Telegram thành công! Phản hồi: " + response.getContentText());
-  } catch (eTelegram) {
-    console.log("❌ Lỗi gửi tin nhắn Telegram: " + eTelegram.toString());
-  }
+  // Gọi UrlFetchApp (Để Google Apps Script tự bật Popup xin cấp quyền khi chạy)
+  var response = UrlFetchApp.fetch(url, options);
+  console.log("📲 Đã gửi cảnh báo Telegram thành công! Phản hồi: " + response.getContentText());
 }
 
 // ==============================================================================
