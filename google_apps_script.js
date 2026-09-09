@@ -442,6 +442,9 @@ function checkOverdueReports(shiftName) {
     sendTelegramMessage(messageText);
 
   } catch (err) {
+    if (err.toString().indexOf("UrlFetchApp") !== -1 || err.toString().indexOf("permission") !== -1) {
+      throw err; // Ném lỗi ra ngoài để Google Apps Script bắt buộc mở Popup Cấp Quyền (Authorization Required)!
+    }
     console.log("Lỗi kiểm tra cảnh báo quá hạn: " + err.toString());
   }
 }
