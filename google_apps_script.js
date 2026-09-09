@@ -65,8 +65,8 @@ function doPost(e) {
       }
       masterSheet.getRange("A2").setValue(JSON.stringify(data.masterData));
 
-      // Tự động đảm bảo Sheet "Đơn Hàng & Giao Hàng" được khởi tạo chuẩn mẫu
-      try { createDonHangGiaoHangSheet(); } catch (eDh) { console.log(eDh); }
+      // Tự động đảm bảo Sheet "Đơn Hàng" & Sheet "Giao Hàng" được khởi tạo chuẩn mẫu
+      try { createDonHangGiaoHangSheets(); } catch (eDh) { console.log(eDh); }
 
       // Đồng bộ tự động danh sách Công Nhân từ Master Data sang Sheet "Danh Sách Công Nhân"
       if (data.masterData.userAccounts && Array.isArray(data.masterData.userAccounts)) {
@@ -98,9 +98,10 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // XỬ LÝ LƯU HOẶC CẬP NHẬT ĐƠN HÀNG & GIAO HÀNG TỪ ADMIN
+    // XỬ LÝ LƯU HOẶC CẬP NHẬT ĐƠN HÀNG TỪ ADMIN
     if (data.action === "saveOrderData" && data.order) {
-      var orderSheet = createDonHangGiaoHangSheet();
+      var sheets = createDonHangGiaoHangSheets();
+      var orderSheet = sheets.orderSheet;
       var o = data.order;
       var oPo = String(o.po || "").trim();
 
@@ -115,40 +116,74 @@ function doPost(e) {
       }
 
       var qtyPlan = Number(o.qty_plan || 0);
-      var qtyDelivered = Number(o.qty_delivered || 0);
-      var status = qtyDelivered >= qtyPlan ? "Đã giao đủ" : "Đang sản xuất";
 
       if (foundRow > 1) {
         // Cập nhật dòng PO hiện có
-        orderSheet.getRange(foundRow, 5).setValue(qtyPlan);
-        orderSheet.getRange(foundRow, 7).setValue(qtyDelivered);
-        orderSheet.getRange(foundRow, 8).setFormula("=E" + foundRow + "-G" + foundRow);
-        orderSheet.getRange(foundRow, 10).setValue(o.deadline || "");
-        orderSheet.getRange(foundRow, 11).setValue(status);
-        if (o.note) orderSheet.getRange(foundRow, 12).setValue(o.note);
+        orderSheet.getRange(foundRow, 3).setValue(o.customer || "");
+        orderSheet.getRange(foundRow, 4).setValue(o.product || "");
+        orderSheet.getRange(foundRow, 5).setValue(o.product_code || "");
+        orderSheet.getRange(foundRow, 6).setValue(qtyPlan);
+        orderSheet.getRange(foundRow, 11).setValue(o.order_date || "");
+        orderSheet.getRange(foundRow, 12).setValue(o.deadline || "");
+        if (o.note) orderSheet.getRange(foundRow, 14).setValue(o.note);
       } else {
         // Thêm PO mới vào dòng cuối
         var nextSttOrder = oRows.length;
-        var rowFormula = "=E" + (nextSttOrder + 1) + "-G" + (nextSttOrder + 1);
+        var rIdx = nextSttOrder + 1;
+        var formulaGiaCong = "=SUMIFS('Nhật Ký Sản Lượng'!J:J, 'Nhật Ký Sản Lượng'!G:G, B" + rIdx + ")";
+        var formulaGiaoHang = "=SUMIFS('Giao Hàng'!F:F, 'Giao Hàng'!C:C, B" + rIdx + ")";
+        var formulaConNo = "=F" + rIdx + "-H" + rIdx;
+        var formulaTonKho = "=G" + rIdx + "-H" + rIdx;
+        var formulaStatus = '=IF(H' + rIdx + '>=F' + rIdx + ', "Đã giao đủ", IF(G' + rIdx + '>=F' + rIdx + ', "Đã sản xuất xong - Chờ giao", IF(G' + rIdx + '>0, "Đang sản xuất", "Chưa sản xuất")))';
+
         orderSheet.appendRow([
           nextSttOrder,
           oPo,
           o.customer || "",
           o.product || "",
+          o.product_code || "",
           qtyPlan,
-          0,
-          qtyDelivered,
-          rowFormula,
+          formulaGiaCong,
+          formulaGiaoHang,
+          formulaConNo,
+          formulaTonKho,
           o.order_date || "",
           o.deadline || "",
-          status,
+          formulaStatus,
           o.note || ""
         ]);
       }
 
       return ContentService.createTextOutput(JSON.stringify({
         "result": "success",
-        "message": "Đã lưu & đồng bộ Đơn hàng lên Google Sheet 'Đơn Hàng & Giao Hàng'!"
+        "message": "Đã lưu & đồng bộ Đơn hàng lên Google Sheet 'Đơn Hàng'!"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // XỬ LÝ LƯU THÔNG TIN GIAO HÀNG TỪ ADMIN / PHÒNG KHO
+    if (data.action === "saveDeliveryData" && data.delivery) {
+      var sheets = createDonHangGiaoHangSheets();
+      var delSheet = sheets.delSheet;
+      var d = data.delivery;
+      var dRows = delSheet.getDataRange().getValues();
+      var nextSttDel = dRows.length;
+
+      delSheet.appendRow([
+        nextSttDel,
+        d.delivery_date || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
+        String(d.po || "").trim(),
+        d.customer || "",
+        d.product || "",
+        Number(d.qty_delivered || 0),
+        d.unit || "Cái",
+        d.vehicle_info || "",
+        d.shipper || "",
+        d.note || ""
+      ]);
+
+      return ContentService.createTextOutput(JSON.stringify({
+        "result": "success",
+        "message": "Đã ghi nhận phiếu giao hàng lên Google Sheet 'Giao Hàng'!"
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -237,6 +272,11 @@ function doPost(e) {
       data.downtime_note || '',    // Ghi chú phát sinh
       photoCellContent             // Link Google Drive hình ảnh sản phẩm & phế phẩm
     ]);
+
+    // Tự động kiểm tra và thêm PO vào Sheet "Đơn Hàng" nếu chưa có
+    if (data.po && String(data.po).trim() !== '') {
+      autoSyncSinglePoToOrderSheet(String(data.po).trim(), data.customer || '', data.product || '');
+    }
 
     // 6. Trả về phản hồi XÁC NHẬN THÀNH CÔNG cho Mini App
     return ContentService.createTextOutput(JSON.stringify({
@@ -442,91 +482,402 @@ function setupShiftTriggers() {
 }
 
 // ==============================================================================
-// HÀM TEST CẤP QUYỀN TRUY CẬP GOOGLE DRIVE
-// ==============================================================================
-function testDrivePermissions() {
-  var folderName = "Ảnh Báo Cáo Thành Phẩm GCCK 2026";
-  var folders = DriveApp.getFoldersByName(folderName);
-  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
-  Logger.log("✅ Quyền truy cập Google Drive đã được phê duyệt thành công! Thư mục ID: " + folder.getId());
-}
-
-// ==============================================================================
-// 9. MENU TỰ ĐỘNG & TẠO SHEET "ĐƠN HÀNG & GIAO HÀNG" CHUẨN MẪU
+// 9. MENU TỰ ĐỘNG & BỘ TÍNH TOÁN TIẾN ĐỘ SẢN XUẤT TỰ ĐỘNG 100% SẠCH LỖI #ERROR!
 // ==============================================================================
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu("⚙️ Quản Lý GCCK 2026")
-    .addItem("📦 Khởi Tạo Sheet 'Đơn Hàng & Giao Hàng'", "createDonHangGiaoHangSheet")
+    .addItem("🚀 XÓA SẠCH LỖI #ERROR! & CẬP NHẬT TIẾN ĐỘ THỰC TẾ", "calculateAndPopulateAllSheets")
+    .addItem("📦 Khởi Tạo Bộ 4 Sheet Quản Lý Đơn Hàng & Tiến Độ", "createFullOrderManagementSheets")
+    .addItem("🔄 Tự Động Rút PO & Tiến Độ Nguyên Công", "syncAllPosAndOperationsProgress")
     .addItem("⏰ Cài Đặt Bộ Hẹn Giờ Cảnh Báo 3 Ca", "setupShiftTriggers")
     .addToUi();
 }
 
-function createDonHangGiaoHangSheet() {
+// 🛠️ HÀM TÍNH TOÁN & CẬP NHẬT SỐ LIỆU THỰC TẾ TRỰC TIẾP (XÓA SẠCH 100% LỖI #ERROR!)
+function calculateAndPopulateAllSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheetName = "Đơn Hàng & Giao Hàng";
-  var sheet = ss.getSheetByName(sheetName);
 
-  if (!sheet) {
-    sheet = ss.insertSheet(sheetName);
+  // 1. Đọc dữ liệu Nhật Ký Sản Lượng
+  var logSheet = ss.getSheetByName("Nhật Ký Sản Lượng");
+  if (!logSheet) {
+    var allSheets = ss.getSheets();
+    for (var s = 0; s < allSheets.length; s++) {
+      var sName = allSheets[s].getName();
+      if (sName !== "Tổng Đơn Hàng" && sName !== "Kế Hoạch Sản Xuất" && sName !== "Đơn Hàng Đang Gia Công" && sName !== "Giao Hàng") {
+        logSheet = allSheets[s];
+        try { logSheet.setName("Nhật Ký Sản Lượng"); } catch (e) {}
+        break;
+      }
+    }
   }
 
-  if (sheet.getLastRow() === 0) {
-    // 1. Tiêu đề các cột tiêu chuẩn
-    var headers = [
-      "STT", 
-      "Mã PO / Đơn Hàng", 
-      "Khách Hàng", 
-      "Tên Sản Phẩm", 
-      "SL Đặt Hàng (Kế Hoạch)", 
-      "SL Đã Gia Công (Đạt)", 
-      "SL Đã Giao Hàng", 
-      "SL Còn Lại (Nợ Hàng)", 
-      "Ngày Đặt Hàng", 
-      "Hạn Giao Hàng (Deadline)", 
-      "Trạng Thái Đơn Hàng", 
-      "Ghi Chú Chi Tiết"
-    ];
+  var poGiaCongMap = {}; // { po: { totalOk: 0, cua: 0, phay: 0, tien: 0, qc: 0 } }
 
-    sheet.appendRow(headers);
+  if (logSheet && logSheet.getLastRow() > 1) {
+    var logData = logSheet.getDataRange().getValues();
+    for (var i = 1; i < logData.length; i++) {
+      var po = logData[i][6] ? String(logData[i][6]).trim() : "";
+      var op = logData[i][7] ? String(logData[i][7]).trim().toLowerCase() : "";
+      var qtyDat = Number(logData[i][9] || 0);
 
-    // Định dạng Thanh tiêu đề Header
-    var headerRange = sheet.getRange(1, 1, 1, headers.length);
-    headerRange.setFontWeight("bold");
-    headerRange.setBackground("#1e293b");
-    headerRange.setFontColor("#ffffff");
-    headerRange.setHorizontalAlignment("center");
-    headerRange.setVerticalAlignment("middle");
-    sheet.setRowHeight(1, 35);
-    sheet.setFrozenRows(1);
+      if (po) {
+        if (!poGiaCongMap[po]) {
+          poGiaCongMap[po] = { totalOk: 0, cua: 0, phay: 0, tien: 0, qc: 0 };
+        }
+        poGiaCongMap[po].totalOk += qtyDat;
 
-    // 2. Dữ liệu mẫu chuẩn hóa minh họa
-    var sampleRows = [
-      [1, "PO-2026-001", "Win-Win", "Trục Khuỷu Động Cơ Φ250", 1000, 850, 500, "=E2-G2", "2026-08-01", "2026-08-30", "Đang sản xuất", "Giao đợt 1 thành công 500 pcs"],
-      [2, "PO-2026-002", "UCC", "Khuôn gá xích POWER", 200, 200, 200, "=E3-G3", "2026-08-05", "2026-08-20", "Đã giao đủ", "Hoàn thành 100% đúng hạn"],
-      [3, "PO-2026-003", "Kachimizu", "Cụm Bán Thành Phẩm ALKTOP", 500, 120, 0, "=E4-G4", "2026-08-10", "2026-08-25", "Đang sản xuất", "Đã xong công đoạn phay"]
-    ];
-
-    for (var r = 0; r < sampleRows.length; r++) {
-      sheet.appendRow(sampleRows[r]);
+        if (op.indexOf("cưa") >= 0 || op.indexOf("cua") >= 0 || op.indexOf("nc1") >= 0) {
+          poGiaCongMap[po].cua += qtyDat;
+        } else if (op.indexOf("phay") >= 0 || op.indexOf("nc2") >= 0) {
+          poGiaCongMap[po].phay += qtyDat;
+        } else if (op.indexOf("tiện") >= 0 || op.indexOf("tien") >= 0 || op.indexOf("nc3") >= 0) {
+          poGiaCongMap[po].tien += qtyDat;
+        } else if (op.indexOf("qc") >= 0 || op.indexOf("mài") >= 0 || op.indexOf("mai") >= 0 || op.indexOf("nc4") >= 0) {
+          poGiaCongMap[po].qc += qtyDat;
+        }
+      }
     }
-
-    // Căn lề & Định dạng căn chỉnh
-    var dataRange = sheet.getRange(2, 1, sampleRows.length, headers.length);
-    dataRange.setVerticalAlignment("middle");
-    sheet.getRange(2, 1, sampleRows.length, 1).setHorizontalAlignment("center"); // STT
-    sheet.getRange(2, 5, sampleRows.length, 4).setHorizontalAlignment("right");  // Số lượng
-    sheet.getRange(2, 9, sampleRows.length, 2).setHorizontalAlignment("center"); // Ngày
-    sheet.getRange(2, 11, sampleRows.length, 1).setHorizontalAlignment("center"); // Trạng thái
-
-    // Auto fit cột
-    for (var col = 1; col <= headers.length; col++) {
-      sheet.autoResizeColumn(col);
-    }
-    Logger.log("✅ Đã khởi tạo thành công Sheet 'Đơn Hàng & Giao Hàng' trên Google Sheets!");
-  } else {
-    Logger.log("ℹ️ Sheet 'Đơn Hàng & Giao Hàng' đã tồn tại sẵn.");
   }
-  return sheet;
+
+  // 2. Đọc dữ liệu Giao Hàng
+  var delSheet = ss.getSheetByName("Giao Hàng");
+  var poGiaoHangMap = {}; // { po: totalDelivered }
+  if (delSheet && delSheet.getLastRow() > 1) {
+    var delData = delSheet.getDataRange().getValues();
+    for (var d = 1; d < delData.length; d++) {
+      var dPo = delData[d][2] ? String(delData[d][2]).trim() : "";
+      var dQty = Number(delData[d][5] || 0);
+      if (dPo) {
+        poGiaoHangMap[dPo] = (poGiaoHangMap[dPo] || 0) + dQty;
+      }
+    }
+  }
+
+  // 3. XÓA SẠCH CÔNG THỨC CŨ BỊ LỖI & CẬP NHẬT SHEET "Tổng Đơn Hàng"
+  var s1 = ss.getSheetByName("Tổng Đơn Hàng");
+  if (s1 && s1.getLastRow() > 1) {
+    var lastR1 = s1.getLastRow();
+    // 🧹 TẨY SẠCH 100% CÔNG THỨC BỊ DÍNH LỖI CŨ
+    s1.getRange(2, 7, lastR1 - 1, 8).clearContent();
+
+    var r1Data = s1.getDataRange().getValues();
+    for (var r = 1; r < r1Data.length; r++) {
+      var rowNum = r + 1;
+      var po1 = r1Data[r][1] ? String(r1Data[r][1]).trim() : "";
+      var qtyDatHang = Number(r1Data[r][5] || 0);
+
+      var gcInfo = poGiaCongMap[po1] || { totalOk: 0, cua: 0, phay: 0, tien: 0, qc: 0 };
+      var slGiaCong = gcInfo.totalOk;
+      var slGiaoHang = poGiaoHangMap[po1] || 0;
+      var slConNo = Math.max(0, qtyDatHang - slGiaoHang);
+      var slTonKho = Math.max(0, slGiaCong - slGiaoHang);
+
+      var status = "Chưa sản xuất";
+      if (slGiaoHang >= qtyDatHang && qtyDatHang > 0) {
+        status = "Đã giao đủ";
+      } else if (slGiaCong >= qtyDatHang && qtyDatHang > 0) {
+        status = "Đã xong - Chờ giao";
+      } else if (slGiaCong > 0) {
+        status = "Đang sản xuất";
+      }
+
+      s1.getRange(rowNum, 7).setValue(slGiaCong);
+      s1.getRange(rowNum, 8).setValue(slGiaoHang);
+      s1.getRange(rowNum, 9).setValue(slConNo);
+      s1.getRange(rowNum, 10).setValue(slTonKho);
+      s1.getRange(rowNum, 13).setValue(status);
+    }
+  }
+
+  // 4. XÓA SẠCH CÔNG THỨC CŨ BỊ LỖI & CẬP NHẬT SHEET "Kế Hoạch Sản Xuất"
+  var s2 = ss.getSheetByName("Kế Hoạch Sản Xuất");
+  if (s2 && s2.getLastRow() > 1) {
+    var lastR2 = s2.getLastRow();
+    // 🧹 TẨY SẠCH 100% CÔNG THỨC BỊ DÍNH LỖI CŨ
+    s2.getRange(2, 7, lastR2 - 1, 5).clearContent();
+
+    var r2Data = s2.getDataRange().getValues();
+    for (var r2 = 1; r2 < r2Data.length; r2++) {
+      var rowNum2 = r2 + 1;
+      var po2 = r2Data[r2][1] ? String(r2Data[r2][1]).trim() : "";
+      var qtyKeHoach = Number(r2Data[r2][5] || 0);
+
+      var gcInfo2 = poGiaCongMap[po2] || { totalOk: 0 };
+      var slGiaCong2 = gcInfo2.totalOk;
+      var slGiaoHang2 = poGiaoHangMap[po2] || 0;
+      var tyLeKH = qtyKeHoach > 0 ? (slGiaCong2 / qtyKeHoach) : 0;
+      var statusKH = slGiaCong2 >= qtyKeHoach && qtyKeHoach > 0 ? "Đạt KH" : (slGiaCong2 > 0 ? "Đang làm" : "Chưa làm");
+
+      s2.getRange(rowNum2, 7).setValue(slGiaCong2);
+      s2.getRange(rowNum2, 8).setValue(slGiaoHang2);
+      s2.getRange(rowNum2, 9).setValue(tyLeKH).setNumberFormat("0.0%");
+      s2.getRange(rowNum2, 10).setValue(statusKH);
+    }
+  }
+
+  // 5. XÓA SẠCH CÔNG THỨC CŨ BỊ LỖI & CẬP NHẬT SHEET "Đơn Hàng Đang Gia Công"
+  var s3 = ss.getSheetByName("Đơn Hàng Đang Gia Công");
+  if (s3 && s3.getLastRow() > 1) {
+    var lastR3 = s3.getLastRow();
+    // 🧹 TẨY SẠCH 100% CÔNG THỨC BỊ DÍNH LỖI CŨ
+    s3.getRange(2, 6, lastR3 - 1, 10).clearContent();
+
+    var r3Data = s3.getDataRange().getValues();
+    for (var r3 = 1; r3 < r3Data.length; r3++) {
+      var rowNum3 = r3 + 1;
+      var po3 = r3Data[r3][1] ? String(r3Data[r3][1]).trim() : "";
+      var qtyDat = Number(r3Data[r3][4] || 0);
+
+      var gcInfo3 = poGiaCongMap[po3] || { totalOk: 0, cua: 0, phay: 0, tien: 0, qc: 0 };
+
+      var slCua = gcInfo3.cua;
+      var pctCua = qtyDat > 0 ? (slCua / qtyDat) : 0;
+
+      var slPhay = gcInfo3.phay;
+      var pctPhay = qtyDat > 0 ? (slPhay / qtyDat) : 0;
+
+      var slTien = gcInfo3.tien;
+      var pctTien = qtyDat > 0 ? (slTien / qtyDat) : 0;
+
+      var slQc = gcInfo3.qc;
+      var pctQc = qtyDat > 0 ? (slQc / qtyDat) : 0;
+
+      var pctAvg = (pctCua + pctPhay + pctTien + pctQc) / 4;
+      var statusGC = pctAvg >= 1 ? "Hoàn thành 100%" : (gcInfo3.totalOk > 0 ? "Đang gia công" : "Chưa làm");
+
+      s3.getRange(rowNum3, 6).setValue(slCua);
+      s3.getRange(rowNum3, 7).setValue(pctCua).setNumberFormat("0.0%");
+
+      s3.getRange(rowNum3, 8).setValue(slPhay);
+      s3.getRange(rowNum3, 9).setValue(pctPhay).setNumberFormat("0.0%");
+
+      s3.getRange(rowNum3, 10).setValue(slTien);
+      s3.getRange(rowNum3, 11).setValue(pctTien).setNumberFormat("0.0%");
+
+      s3.getRange(rowNum3, 12).setValue(slQc);
+      s3.getRange(rowNum3, 13).setValue(pctQc).setNumberFormat("0.0%");
+
+      s3.getRange(rowNum3, 14).setValue(pctAvg).setNumberFormat("0.0%");
+      s3.getRange(rowNum3, 15).setValue(statusGC);
+    }
+  }
+
+  SpreadsheetApp.flush();
+  Logger.log("✅ Đã tính toán và cập nhật giá trị thực tế trực tiếp 100% sạch lỗi #ERROR!");
+  return "Đã xóa sạch lỗi #ERROR! và cập nhật số liệu thực tế thành công!";
 }
+
+// Tên alias hỗ trợ hàm cũ
+function fixAllFormulaErrors() {
+  return calculateAndPopulateAllSheets();
+}
+
+// 1. TỰ ĐỘNG THÊM PO VÀ NGUYÊN CÔNG VÀO CÁC SHEET KHI CÔNG NHÂN BÁO CÁO
+function autoSyncSinglePoToOrderSheet(poStr, customerStr, productStr) {
+  try {
+    if (!poStr || String(poStr).trim() === '') return;
+    createFullOrderManagementSheets();
+    syncAllPosAndOperationsProgress();
+    calculateAndPopulateAllSheets();
+  } catch (ePo) {
+    console.log("Lỗi tự động đồng bộ PO: " + ePo.toString());
+  }
+}
+
+// 2. TỰ ĐỘNG QUÉT & ĐỒNG BỘ TIẾN ĐỘ NGUYÊN CÔNG CỦA CÁC PO
+function syncAllPosAndOperationsProgress() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var tongOrderSheet = ss.getSheetByName("Tổng Đơn Hàng");
+  var dangGiaCongSheet = ss.getSheetByName("Đơn Hàng Đang Gia Công");
+  var keHoachSheet = ss.getSheetByName("Kế Hoạch Sản Xuất");
+  var logSheet = ss.getSheetByName("Nhật Ký Sản Lượng");
+
+  if (!tongOrderSheet || !dangGiaCongSheet || !logSheet) return;
+
+  var existingPos = new Set();
+  var tongData = tongOrderSheet.getDataRange().getValues();
+  for (var r = 1; r < tongData.length; r++) {
+    if (tongData[r][1]) {
+      existingPos.add(String(tongData[r][1]).trim().toLowerCase());
+    }
+  }
+
+  var logData = logSheet.getDataRange().getValues();
+  var countAdded = 0;
+
+  for (var i = 1; i < logData.length; i++) {
+    var customer = logData[i][4] ? String(logData[i][4]).trim() : "";
+    var product = logData[i][5] ? String(logData[i][5]).trim() : "";
+    var po = logData[i][6] ? String(logData[i][6]).trim() : "";
+
+    if (po && !existingPos.has(po.toLowerCase())) {
+      existingPos.add(po.toLowerCase());
+      countAdded++;
+
+      // 2.1 Thêm vào Sheet "Tổng Đơn Hàng"
+      var nextSttTong = tongOrderSheet.getLastRow();
+      tongOrderSheet.appendRow([
+        nextSttTong,
+        po,
+        customer,
+        product,
+        "",
+        0, 0, 0, 0, 0,
+        Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
+        "",
+        "Chưa sản xuất",
+        "Tự động trích xuất từ Nhật Ký Sản Lượng"
+      ]);
+
+      // 2.2 Thêm vào Sheet "Kế Hoạch Sản Xuất"
+      if (keHoachSheet) {
+        var nextSttKH = keHoachSheet.getLastRow();
+        keHoachSheet.appendRow([
+          nextSttKH,
+          po,
+          "Kế hoạch tháng " + (new Date().getMonth() + 1),
+          customer,
+          product,
+          0, 0, 0, 0,
+          "Chưa làm",
+          "Tự động từ nhật ký"
+        ]);
+      }
+
+      // 2.3 Thêm vào Sheet "Đơn Hàng Đang Gia Công" (Tiến Độ Nguyên Công %)
+      var nextSttGC = dangGiaCongSheet.getLastRow();
+      dangGiaCongSheet.appendRow([
+        nextSttGC,
+        po,
+        customer,
+        product,
+        0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0,
+        "Chưa làm"
+      ]);
+    }
+  }
+
+  // Tính toán lại giá trị thực tế trực tiếp
+  calculateAndPopulateAllSheets();
+
+  Logger.log("✅ Đã tự động quét & rút " + countAdded + " PO cùng tiến độ Nguyên Công!");
+}
+
+// 3. KHỞI TẠO BỘ 4 SHEET QUẢN LÝ SẢN XUẤT CHUYÊN NGHIỆP
+function createFullOrderManagementSheets() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // --------------------------------------------------------------------------
+  // SHEET 1: "Tổng Đơn Hàng" (Dữ liệu đầu vào tổng sau khi nhận đơn)
+  // --------------------------------------------------------------------------
+  var s1Name = "Tổng Đơn Hàng";
+  var s1 = ss.getSheetByName(s1Name) || ss.insertSheet(s1Name);
+  if (s1.getLastRow() === 0) {
+    var h1 = [
+      "STT", "Mã PO / Đơn Hàng", "Khách Hàng", "Tên Sản Phẩm", "Mã SP / Mác Thép",
+      "SL Đặt Hàng (Tổng)", "SL Đã Gia Công (Tự Động)", "SL Đã Giao Hàng (Tự Động)",
+      "SL Còn Thiếu / Nợ Hàng", "SL Tồn Kho Chờ Giao", "Ngày Nhận Đơn",
+      "Hạn Giao Hàng (Deadline)", "Trạng Thái Tổng", "Ghi Chú"
+    ];
+    s1.appendRow(h1);
+    s1.getRange(1, 1, 1, h1.length).setFontWeight("bold").setBackground("#1e293b").setFontColor("#ffffff").setHorizontalAlignment("center");
+    s1.setRowHeight(1, 35);
+    s1.setFrozenRows(1);
+
+    var sample1 = [
+      [1, "PO-2026-001", "Win-Win", "Trục Khuỷu Động Cơ Φ250", "TK-250", 1000, 0, 0, 0, 0, "2026-08-01", "2026-08-30", "Chưa sản xuất", "Đơn hàng xuất khẩu"],
+      [2, "PO-2026-002", "UCC", "Khuôn gá xích POWER", "KG-POW", 200, 0, 0, 0, 0, "2026-08-05", "2026-08-20", "Chưa sản xuất", "Đơn ưu tiên gia công"]
+    ];
+    sample1.forEach(function (r) { s1.appendRow(r); });
+    for (var c = 1; c <= h1.length; c++) s1.autoResizeColumn(c);
+  }
+
+  // --------------------------------------------------------------------------
+  // SHEET 2: "Kế Hoạch Sản Xuất" (Kế hoạch tuần / tháng gia công)
+  // --------------------------------------------------------------------------
+  var s2Name = "Kế Hoạch Sản Xuất";
+  var s2 = ss.getSheetByName(s2Name) || ss.insertSheet(s2Name);
+  if (s2.getLastRow() === 0) {
+    var h2 = [
+      "STT", "Mã PO / Đơn Hàng", "Kế Hoạch (Tuần / Tháng)", "Khách Hàng", "Tên Sản Phẩm",
+      "SL Kế Hoạch Đặt Ra", "SL Đã Gia Công (Đạt)", "SL Đã Giao Hàng",
+      "Tỷ Lệ Hoàn Thành KH (%)", "Trạng Thái Kế Hoạch", "Ghi Chú Tiến Độ"
+    ];
+    s2.appendRow(h2);
+    s2.getRange(1, 1, 1, h2.length).setFontWeight("bold").setBackground("#0369a1").setFontColor("#ffffff").setHorizontalAlignment("center");
+    s2.setRowHeight(1, 35);
+    s2.setFrozenRows(1);
+
+    var sample2 = [
+      [1, "PO-2026-001", "Tuần 34 - Tháng 8", "Win-Win", "Trục Khuỷu Động Cơ Φ250", 500, 0, 0, 0, "Chưa làm", "Kế hoạch Lô 1"],
+      [2, "PO-2026-001", "Tuần 35 - Tháng 8", "Win-Win", "Trục Khuỷu Động Cơ Φ250", 500, 0, 0, 0, "Chưa làm", "Kế hoạch Lô 2"]
+    ];
+    sample2.forEach(function (r) { s2.appendRow(r); });
+    for (var c2 = 1; c2 <= h2.length; c2++) s2.autoResizeColumn(c2);
+  }
+
+  // --------------------------------------------------------------------------
+  // SHEET 3: "Đơn Hàng Đang Gia Công" (TIẾN ĐỘ TỪNG NGUYÊN CÔNG & % HOÀN THÀNH)
+  // --------------------------------------------------------------------------
+  var s3Name = "Đơn Hàng Đang Gia Công";
+  var s3 = ss.getSheetByName(s3Name) || ss.insertSheet(s3Name);
+  if (s3.getLastRow() === 0) {
+    var h3 = [
+      "STT", "Mã PO / Đơn Hàng", "Khách Hàng", "Tên Sản Phẩm", "SL Đặt Hàng",
+      "NC1: Cưa Phôi (SL)", "NC1 (%)",
+      "NC2: Phay CNC (SL)", "NC2 (%)",
+      "NC3: Tiện CNC (SL)", "NC3 (%)",
+      "NC4: Mài / QC (SL)", "NC4 (%)",
+      "Tiến Độ Tổng Thể (%)", "Trạng Thái Gia Công"
+    ];
+    s3.appendRow(h3);
+    s3.getRange(1, 1, 1, h3.length).setFontWeight("bold").setBackground("#4d7c0f").setFontColor("#ffffff").setHorizontalAlignment("center");
+    s3.setRowHeight(1, 35);
+    s3.setFrozenRows(1);
+
+    var sample3 = [
+      [
+        1, "PO-2026-001", "Win-Win", "Trục Khuỷu Động Cơ Φ250", 1000,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, "Chưa làm"
+      ]
+    ];
+    sample3.forEach(function (r) { s3.appendRow(r); });
+    for (var c3 = 1; c3 <= h3.length; c3++) s3.autoResizeColumn(c3);
+  }
+
+  // --------------------------------------------------------------------------
+  // SHEET 4: "Giao Hàng" (Nhật ký mỗi lần xuất giao hàng)
+  // --------------------------------------------------------------------------
+  var s4Name = "Giao Hàng";
+  var s4 = ss.getSheetByName(s4Name) || ss.insertSheet(s4Name);
+  if (s4.getLastRow() === 0) {
+    var h4 = [
+      "STT", "Ngày Giao Hàng", "Mã PO / Đơn Hàng", "Khách Hàng", "Tên Sản Phẩm",
+      "SL Giao Hàng", "Đơn Vị Tính", "Số Xe / Chứng Từ", "Người Giao", "Ghi Chú"
+    ];
+    s4.appendRow(h4);
+    s4.getRange(1, 1, 1, h4.length).setFontWeight("bold").setBackground("#0f766e").setFontColor("#ffffff").setHorizontalAlignment("center").setVerticalAlignment("middle");
+    s4.setRowHeight(1, 35);
+    s4.setFrozenRows(1);
+
+    var sample4 = [
+      [1, "2026-08-15", "PO-2026-001", "Win-Win", "Trục Khuỷu Động Cơ Φ250", 500, "Cái", "Xe 29C-123.45", "Nguyễn Văn A", "Giao đợt 1 thành công"],
+      [2, "2026-08-18", "PO-2026-002", "UCC", "Khuôn gá xích POWER", 200, "Cái", "Xe 30F-987.65", "Trần Văn B", "Giao đủ 100%"]
+    ];
+
+    sample4.forEach(function (r) { s4.appendRow(r); });
+    for (var c4 = 1; c4 <= h4.length; c4++) s4.autoResizeColumn(c4);
+  }
+
+  // Quét PO và tự động tính toán dữ liệu thực tế trực tiếp
+  try { syncAllPosAndOperationsProgress(); } catch (eSync) { console.log(eSync); }
+  try { calculateAndPopulateAllSheets(); } catch (eFix) { console.log(eFix); }
+
+  Logger.log("✅ Đã khởi tạo thành công trọn bộ 4 Sheet và tính toán số liệu sạch lỗi 100%!");
+  return { tongOrderSheet: s1, keHoachSheet: s2, dangGiaCongSheet: s3, delSheet: s4 };
+}
+
+
 
