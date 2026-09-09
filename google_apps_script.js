@@ -1,6 +1,7 @@
 // ==============================================================================
 // CẤU HÌNH GOOGLE DRIVE, TELEGRAM BOT & MINI APP
 // ==============================================================================
+var SPREADSHEET_ID = "";    // Dán ID Google Sheet vào đây nếu dùng Standalone Script (Ví dụ: "1A2b3C4d5E6f7G...")
 var PRODUCT_FOLDER_ID = ""; // Ví dụ: "1A2b3C4d5E6f7G..." (Để trống hệ thống tự tạo)
 var SCRAP_FOLDER_ID = "";   // Ví dụ: "9Z8y7X6w5V4u3T..." (Để trống hệ thống tự tạo)
 
@@ -11,9 +12,25 @@ var TELEGRAM_CHAT_ID = "-5457065729";   // Dán Chat ID Nhóm Telegram xưởng 
 // 🌐 URL Mini App Sản Lượng của bạn (Netlify hoặc GitHub Pages)
 var MINI_APP_URL = "https://happiness2286-dot.github.io/sanluonggcck/";       // Dán link GitHub Pages (ví dụ: "https://ten-ban.github.io/SANLUONG2026/") hoặc Netlify vào đây!
 
+// 🟢 HÀM MỞ GOOGLE SHEET AN TOÀN (HỖ TRỢ CẢ THỦ CÔNG, BỘ HẸN GIỜ TRIGGERS & STANDALONE SCRIPT)
+function getSpreadsheet() {
+  if (typeof SPREADSHEET_ID !== 'undefined' && SPREADSHEET_ID && SPREADSHEET_ID.trim() !== "") {
+    try {
+      return SpreadsheetApp.openById(SPREADSHEET_ID.trim());
+    } catch (eId) {
+      console.log("⚠️ Không mở được qua SPREADSHEET_ID: " + eId.toString());
+    }
+  }
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    throw new Error("❌ Không tìm thấy Bảng tính Google Sheet! Vui lòng mở từ Tiện ích mở rộng -> Apps Script trên Sheet hoặc điền SPREADSHEET_ID ở dòng 4.");
+  }
+  return ss;
+}
+
 function doGet(e) {
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getSpreadsheet();
     var masterSheet = ss.getSheetByName("Danh Mục Master");
     if (!masterSheet) {
       return ContentService.createTextOutput(JSON.stringify({
@@ -46,7 +63,7 @@ function doGet(e) {
 function doPost(e) {
   try {
     // 1. Mở Sheet "Nhật Ký Sản Lượng" (Hoặc Sheet đầu tiên)
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getSpreadsheet();
     var sheet = ss.getSheetByName("Nhật Ký Sản Lượng");
     if (!sheet) {
       sheet = ss.getSheets()[0];
@@ -313,7 +330,7 @@ function checkShift3_06h() {
 
 function checkOverdueReports(shiftName) {
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getSpreadsheet();
     var sheet = ss.getSheetByName("Nhật Ký Sản Lượng");
     if (!sheet) sheet = ss.getSheets()[0];
 
@@ -496,7 +513,7 @@ function onOpen() {
 
 // 🛠️ HÀM TÍNH TOÁN & CẬP NHẬT SỐ LIỆU THỰC TẾ TRỰC TIẾP (XÓA SẠCH 100% LỖI #ERROR!)
 function calculateAndPopulateAllSheets() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getSpreadsheet();
 
   // 1. Đọc dữ liệu Nhật Ký Sản Lượng
   var logSheet = ss.getSheetByName("Nhật Ký Sản Lượng");
@@ -687,7 +704,7 @@ function autoSyncSinglePoToOrderSheet(poStr, customerStr, productStr) {
 
 // 2. TỰ ĐỘNG QUÉT & ĐỒNG BỘ TIẾN ĐỘ NGUYÊN CÔNG CỦA CÁC PO
 function syncAllPosAndOperationsProgress() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getSpreadsheet();
   var tongOrderSheet = ss.getSheetByName("Tổng Đơn Hàng");
   var dangGiaCongSheet = ss.getSheetByName("Đơn Hàng Đang Gia Công");
   var keHoachSheet = ss.getSheetByName("Kế Hoạch Sản Xuất");
@@ -767,7 +784,7 @@ function syncAllPosAndOperationsProgress() {
 
 // 3. KHỞI TẠO BỘ 4 SHEET QUẢN LÝ SẢN XUẤT CHUYÊN NGHIỆP
 function createFullOrderManagementSheets() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getSpreadsheet();
 
   // --------------------------------------------------------------------------
   // SHEET 1: "Tổng Đơn Hàng" (Dữ liệu đầu vào tổng sau khi nhận đơn)
