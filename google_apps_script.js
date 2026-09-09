@@ -446,6 +446,14 @@ function checkOverdueReports(shiftName) {
   }
 }
 
+// 🔑 HÀM KÍCH HOẠT POPUP ỦY QUYỀN GOOGLE CHO TELEGRAM
+// (Nếu gặp lỗi "You do not have permission to call UrlFetchApp.fetch", hãy chọn hàm này trên menu và bấm ▶ Chạy 1 lần!)
+function authorizeTelegram() {
+  var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/getMe";
+  var response = UrlFetchApp.fetch(url);
+  Logger.log("✅ ĐÃ XÁC THỰC QUYỀN TELEGRAM THÀNH CÔNG! Phản hồi Bot: " + response.getContentText());
+}
+
 // Hàm gửi tin nhắn Telegram Bot chuẩn API
 function sendTelegramMessage(htmlMessageText) {
   if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN.trim() === "" || !TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID.trim() === "") {
