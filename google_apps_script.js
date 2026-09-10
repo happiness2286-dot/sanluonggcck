@@ -533,6 +533,7 @@ function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu("⚙️ Quản Lý GCCK 2026")
     .addItem("🚀 KHỞI TẠO BỘ 11 SHEET CHUẨN HÓA (100% SẠCH LỖI #ERROR!)", "setup11ChuanHoaSheets")
+    .addItem("🎨 KẺ Ô VIỀN & ĐỊNH DẠNG CHUYÊN NGHIỆP", "formatAllSheetsProfessionally")
     .addItem("🔄 CẬP NHẬT TIẾN ĐỘ & LƯƠNG KHOÁN THỰC TẾ", "calculateAndPopulateAllSheets")
     .addItem("🧹 XÓA 17 SHEET MÁY LẺ CŨ (CHO GỌN BẢNG TÍNH)", "deleteOld17MachineSheets")
     .addItem("⏰ Cài Đặt Bộ Hẹn Giờ Cảnh Báo 3 Ca", "setupShiftTriggers")
@@ -3641,4 +3642,138 @@ function calculateAndPopulateAllSheets() {
   SpreadsheetApp.flush();
   Logger.log("✅ ĐÃ TÍNH TOÁN & CẬP NHẬT TRỰC TIẾP TOÀN BỘ SHEET THÀNH CÔNG 100% SẠCH LỖI #ERROR!");
   return "Đã xóa sạch 100% lỗi #ERROR! và cập nhật toàn bộ số liệu thực tế thành công!";
+}
+
+
+// ==============================================================================
+// 🎨 HÀM KẺ Ô VIỀN & ĐỊNH DẠNG CHUYÊN NGHIỆP TOÀN DIỆN CHO TẤT CẢ CÁC SHEET
+// ==============================================================================
+function formatAllSheetsProfessionally() {
+  var ss = getSpreadsheet();
+  var allSheets = ss.getSheets();
+  
+  allSheets.forEach(function(sh) {
+    var sName = sh.getName();
+    var lastRow = sh.getLastRow();
+    var lastCol = sh.getLastColumn();
+    if (lastRow < 1 || lastCol < 1) return;
+
+    try {
+      // 1. Luôn hiển thị đường lưới Google Sheet
+      sh.setHiddenGridlines(false);
+
+      // 2. Định dạng toàn bộ bảng tính với font chữ hiện đại & căn giữa theo chiều dọc
+      var fullRange = sh.getRange(1, 1, lastRow, lastCol);
+      fullRange.setFontFamily("Roboto")
+               .setVerticalAlignment("middle");
+
+      // 3. Kẻ ô kẻ dòng sắc nét (Borders) cho toàn bộ vùng dữ liệu
+      fullRange.setBorder(true, true, true, true, true, true, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID);
+
+      // 4. Định dạng Dòng 1 (Tiêu Đề Lớn) & Dòng 2 (Mô tả phụ)
+      sh.getRange(1, 1).setFontSize(13).setFontWeight("bold").setFontColor("#0f172a");
+      sh.setRowHeight(1, 36);
+      if (lastRow >= 2) {
+        sh.getRange(2, 1).setFontSize(9.5).setFontStyle("italic").setFontColor("#64748b");
+        sh.setRowHeight(2, 22);
+      }
+
+      // Xác định dòng tiêu đề cột (Thường là dòng 3 hoặc dòng 1 với Nhật Ký Sản Lượng)
+      var headerRow = (sName === "Nhật Ký Sản Lượng") ? 1 : 3;
+      if (sName === "02_Canh_Bao_Qua_Tai_SubCon") headerRow = 4;
+      if (sName === "11_Master_Data") headerRow = 4;
+
+      if (lastRow >= headerRow) {
+        var headerRange = sh.getRange(headerRow, 1, 1, lastCol);
+        
+        // Màu tiêu đề phân cấp chuyên nghiệp theo từng loại sheet
+        var headerBg = "#1e3a8a"; // Xanh Navy sang trọng mặc định
+        if (sName === "Nhật Ký Sản Lượng") headerBg = "#0f172a"; // Đen Slate kỹ thuật
+        else if (sName === "01_Tong_Quan_Dashboard") headerBg = "#1e293b";
+        else if (sName === "03_Can_Bang_Tai_17_May") headerBg = "#0369a1"; // Xanh Cyan năng động
+        else if (sName === "06_Ke_Hoach_Tien_Do_PO") headerBg = "#15803d"; // Xanh Emerald tiến độ
+        else if (sName === "10_Bang_Luong_Khoan_Tho") headerBg = "#b45309"; // Vàng Hổ phách lương khoán
+
+        headerRange.setFontWeight("bold")
+                   .setFontSize(10.5)
+                   .setBackground(headerBg)
+                   .setFontColor("#ffffff")
+                   .setHorizontalAlignment("center");
+        sh.setRowHeight(headerRow, 34);
+        sh.setFrozenRows(headerRow);
+        
+        // Viền đậm hơn cho dòng tiêu đề
+        headerRange.setBorder(true, true, true, true, true, true, "#0f172a", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+      }
+
+      // 5. Định dạng các dòng dữ liệu (Zebra Striping & Căn lề thông minh)
+      var dataStartRow = headerRow + 1;
+      if (lastRow >= dataStartRow) {
+        var numDataRows = lastRow - dataStartRow + 1;
+        var headerValues = sh.getRange(headerRow, 1, 1, lastCol).getValues()[0];
+
+        // Lập ma trận màu so le (Zebra striping)
+        var bgMatrix = [];
+        for (var r = 0; r < numDataRows; r++) {
+          var rowIdx = dataStartRow + r;
+          sh.setRowHeight(rowIdx, 26);
+          var rowBg = (r % 2 === 0) ? "#ffffff" : "#f8fafc";
+          var rowColors = [];
+          for (var c = 0; c < lastCol; c++) rowColors.push(rowBg);
+          bgMatrix.push(rowColors);
+        }
+        sh.getRange(dataStartRow, 1, numDataRows, lastCol).setBackgrounds(bgMatrix);
+
+        // Căn lề thông minh theo tiêu đề từng cột
+        for (var col = 1; col <= lastCol; col++) {
+          var hVal = String(headerValues[col - 1] || "").toLowerCase();
+          var colDataRange = sh.getRange(dataStartRow, col, numDataRows, 1);
+
+          if (hVal.indexOf("stt") >= 0 || hVal.indexOf("mã") >= 0 || hVal.indexOf("ngày") >= 0 || 
+              hVal.indexOf("thời gian") >= 0 || hVal.indexOf("thứ tự") >= 0 || hVal.indexOf("đvt") >= 0) {
+            colDataRange.setHorizontalAlignment("center");
+          } else if (hVal.indexOf("sl") >= 0 || hVal.indexOf("lương") >= 0 || hVal.indexOf("tiền") >= 0 || 
+                     hVal.indexOf("giá") >= 0 || hVal.indexOf("giờ") >= 0 || hVal.indexOf("phút") >= 0 || 
+                     hVal.indexOf("%") >= 0 || hVal.indexOf("khối lượng") >= 0 || hVal.indexOf("đạt") >= 0 || 
+                     hVal.indexOf("hỏng") >= 0 || hVal.indexOf("tiêu hao") >= 0) {
+            colDataRange.setHorizontalAlignment("right");
+          } else {
+            colDataRange.setHorizontalAlignment("left");
+          }
+
+          // Căn lề đặc biệt cho cột trạng thái / đánh giá
+          if (hVal.indexOf("trạng thái") >= 0 || hVal.indexOf("đánh giá") >= 0) {
+            colDataRange.setHorizontalAlignment("center").setFontWeight("bold");
+          }
+        }
+
+        // Kiểm tra dòng Tổng Cộng cuối bảng (nếu có)
+        var lastRowFirstCell = String(sh.getRange(lastRow, 1).getValue() || "").toUpperCase();
+        if (lastRowFirstCell.indexOf("TỔNG") >= 0) {
+          var totalRange = sh.getRange(lastRow, 1, 1, lastCol);
+          totalRange.setFontWeight("bold")
+                    .setBackground("#f1f5f9")
+                    .setBorder(true, true, true, true, true, true, "#475569", SpreadsheetApp.BorderStyle.SOLID);
+          sh.setRowHeight(lastRow, 30);
+        }
+      }
+
+      // 6. Tự động căn chỉnh độ rộng cột vừa vặn
+      for (var colIdx = 1; colIdx <= Math.min(lastCol, 20); colIdx++) {
+        try {
+          sh.autoResizeColumn(colIdx);
+          var colW = sh.getColumnWidth(colIdx);
+          if (colW < 75) sh.setColumnWidth(colIdx, 75);
+          else if (colW > 380) sh.setColumnWidth(colIdx, 380);
+        } catch (eCol) {}
+      }
+
+    } catch (eSheet) {
+      console.log("Lỗi định dạng sheet " + sName + ": " + eSheet.toString());
+    }
+  });
+
+  SpreadsheetApp.flush();
+  Logger.log("✅ ĐÃ KẺ Ô KẺ DÒNG & ĐỊNH DẠNG CHUYÊN NGHIỆP TOÀN BỘ CÁC SHEET!");
+  return "Đã kẻ ô viền và định dạng chuyên nghiệp toàn bộ các sheet thành công!";
 }
