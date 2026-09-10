@@ -3323,7 +3323,7 @@ function setup11ChuanHoaSheets() {
       "Lương Khoán (VNĐ)", "Vật Tư / Chip", "SL Tiêu Hao", "Phút Dừng Máy", "Ghi Chú", "Link Ảnh Drive"
     ];
     logSheet.appendRow(defaultHeaders);
-    logSheet.getRange(1, 1, 1, defaultHeaders.length).setFontWeight("bold").setBackground("#1e293b").setFontColor("#ffffff");
+    logSheet.getRange(1, 1, 1, defaultHeaders.length).setFontWeight("bold").setBackground("#059669").setFontColor("#ffffff");
   }
 
   // Khởi tạo từng sheet chuẩn hóa (Dữ liệu tĩnh & Tiêu đề chuyên nghiệp)
@@ -3356,7 +3356,7 @@ function setup11ChuanHoaSheets() {
       if (matrix.length >= 3) {
         sh.getRange(3, 1, 1, maxCols)
           .setFontWeight("bold")
-          .setBackground("#1e3a8a")
+          .setBackground("#059669")
           .setFontColor("#ffffff")
           .setHorizontalAlignment("center");
         sh.setRowHeight(3, 30);
@@ -3686,13 +3686,9 @@ function formatAllSheetsProfessionally() {
       if (lastRow >= headerRow) {
         var headerRange = sh.getRange(headerRow, 1, 1, lastCol);
         
-        // Màu tiêu đề phân cấp chuyên nghiệp theo từng loại sheet
-        var headerBg = "#1e3a8a"; // Xanh Navy sang trọng mặc định
-        if (sName === "Nhật Ký Sản Lượng") headerBg = "#0f172a"; // Đen Slate kỹ thuật
-        else if (sName === "01_Tong_Quan_Dashboard") headerBg = "#1e293b";
-        else if (sName === "03_Can_Bang_Tai_17_May") headerBg = "#0369a1"; // Xanh Cyan năng động
-        else if (sName === "06_Ke_Hoach_Tien_Do_PO") headerBg = "#15803d"; // Xanh Emerald tiến độ
-        else if (sName === "10_Bang_Luong_Khoan_Tho") headerBg = "#b45309"; // Vàng Hổ phách lương khoán
+        // Màu tiêu đề ĐỒNG BỘ 100% cho TẤT CẢ CÁC SHEET (Xanh Ngọc Lục Bảo Emerald tươi tắn, sáng đẹp & sang trọng)
+        var headerBg = "#059669"; 
+        var headerBorderColor = "#047857";
 
         headerRange.setFontWeight("bold")
                    .setFontSize(10.5)
@@ -3702,8 +3698,8 @@ function formatAllSheetsProfessionally() {
         sh.setRowHeight(headerRow, 34);
         sh.setFrozenRows(headerRow);
         
-        // Viền đậm hơn cho dòng tiêu đề
-        headerRange.setBorder(true, true, true, true, true, true, "#0f172a", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+        // Viền sắc nét cho dòng tiêu đề
+        headerRange.setBorder(true, true, true, true, true, true, headerBorderColor, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
       }
 
       // 5. Định dạng các dòng dữ liệu (Zebra Striping & Căn lề thông minh)
