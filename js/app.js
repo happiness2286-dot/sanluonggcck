@@ -1057,8 +1057,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Validation
-        if (!customer || !product || !op) {
-            showToast('Vui lòng chọn đầy đủ Khách hàng, Sản phẩm và Nguyên công!', 'danger');
+        if (!customer || !product || !op || !machine) {
+            showToast('Vui lòng chọn đầy đủ Khách hàng, Sản phẩm, Máy gia công và Nguyên công!', 'danger');
             return;
         }
 
@@ -1094,7 +1094,7 @@ document.addEventListener('DOMContentLoaded', () => {
             huy_note: huyNoteInput.value,
             product_photos: [...attachedProductPhotos],
             photos: [...attachedPhotos],
-            machine: machine || 'Máy tiện CNC1',
+            machine: machine,
             material: material || 'Không tiêu hao',
             qty_material: qtyMat,
             downtime_min: downtimeMin,

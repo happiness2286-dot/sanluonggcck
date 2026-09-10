@@ -6,7 +6,8 @@ var PRODUCT_FOLDER_ID = ""; // Ví dụ: "1A2b3C4d5E6f7G..." (Để trống hệ
 var SCRAP_FOLDER_ID = "";   // Ví dụ: "9Z8y7X6w5V4u3T..." (Để trống hệ thống tự tạo)
 
 // 🤖 CẤU HÌNH TELEGRAM BOT TỰ ĐỘNG CẢNH BÁO
-var TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN_HERE"; // Dán Token Bot lấy từ @BotFather vào đây (Ví dụ: "8871498341:AAFTz...")
+var TELEGRAM_BOT_TOKEN = "8871498341:AAFTzNNaCNXZlaTJlh8znudxrYFs69bu74s";
+// Dán Token Bot lấy từ @BotFather vào đây (Ví dụ: "8871498341:AAFTz...")
 var TELEGRAM_CHAT_ID = "-5457065729";   // Dán Chat ID Nhóm Telegram xưởng vào đây (Ví dụ: "-100123456789")
 
 // 🌐 URL Mini App Sản Lượng của bạn (Netlify hoặc GitHub Pages)
@@ -530,6 +531,7 @@ function onOpen() {
   ui.createMenu("⚙️ Quản Lý GCCK 2026")
     .addItem("🚀 XÓA SẠCH LỖI #ERROR! & CẬP NHẬT TIẾN ĐỘ THỰC TẾ", "calculateAndPopulateAllSheets")
     .addItem("📦 Khởi Tạo Bộ 4 Sheet Quản Lý Đơn Hàng & Tiến Độ", "createFullOrderManagementSheets")
+    .addItem("🚜 Khởi Tạo 17 Sheet Máy Tự Động Filter", "create17MachineSheets")
     .addItem("🔄 Tự Động Rút PO & Tiến Độ Nguyên Công", "syncAllPosAndOperationsProgress")
     .addItem("⏰ Cài Đặt Bộ Hẹn Giờ Cảnh Báo 3 Ca", "setupShiftTriggers")
     .addToUi();
@@ -547,7 +549,7 @@ function calculateAndPopulateAllSheets() {
       var sName = allSheets[s].getName();
       if (sName !== "Tổng Đơn Hàng" && sName !== "Kế Hoạch Sản Xuất" && sName !== "Đơn Hàng Đang Gia Công" && sName !== "Giao Hàng") {
         logSheet = allSheets[s];
-        try { logSheet.setName("Nhật Ký Sản Lượng"); } catch (e) {}
+        try { logSheet.setName("Nhật Ký Sản Lượng"); } catch (e) { }
         break;
       }
     }
@@ -915,10 +917,67 @@ function createFullOrderManagementSheets() {
   // Quét PO và tự động tính toán dữ liệu thực tế trực tiếp
   try { syncAllPosAndOperationsProgress(); } catch (eSync) { console.log(eSync); }
   try { calculateAndPopulateAllSheets(); } catch (eFix) { console.log(eFix); }
+  try { create17MachineSheets(); } catch (e17) { console.log(e17); }
 
-  Logger.log("✅ Đã khởi tạo thành công trọn bộ 4 Sheet và tính toán số liệu sạch lỗi 100%!");
+  Logger.log("✅ Đã khởi tạo thành công trọn bộ Sheet Quản lý & 17 Sheet máy tự động!");
   return { tongOrderSheet: s1, keHoachSheet: s2, dangGiaCongSheet: s3, delSheet: s4 };
 }
+
+// ==============================================================================
+// 10. HÀM TỰ ĐỘNG KHỞI TẠO & CẤU HÌNH HÀM FILTER CHO 17 SHEET MÁY BỘ PHẬN
+// ==============================================================================
+var CANONICAL_MACHINES = [
+  { code: "M01_Tien_FUJI", name: "Máy tiện FUJI" },
+  { code: "M02_Tien_OKUMA", name: "Máy tiện OKUMA" },
+  { code: "M03_Tien_CNC1", name: "Máy tiện CNC1" },
+  { code: "M04_Tien_CNC2", name: "Máy tiện CNC2" },
+  { code: "M05_Tien_T630", name: "Máy tiện T630" },
+  { code: "M06_Tien_T1516", name: "Máy tiện Tiện T1516" },
+  { code: "M07_Phay_OKK1", name: "Máy Phay OKK1" },
+  { code: "M08_Phay_OKK2", name: "Máy Phay OKK2" },
+  { code: "M09_Phay_OKK3", name: "Máy Phay OKK3" },
+  { code: "M10_Phay_CNC1", name: "Máy Phay CNC1" },
+  { code: "M11_Phay_CNC2", name: "Máy Phay CNC2" },
+  { code: "M12_Phay_OIGO", name: "Máy Phay OIGO" },
+  { code: "M13_Phay_YM", name: "Máy Phay YM" },
+  { code: "M14_Cua_Bang", name: "Máy cưa Băng" },
+  { code: "M15_Khoan_Yoshida", name: "Máy Khoan cần Yoshida" },
+  { code: "M16_CatDay_DK7745", name: "Máy Cắt Dây DK7745" },
+  { code: "M17_CatDay_Podatech", name: "Máy Cắt Dây Podatech" }
+];
+
+function create17MachineSheets() {
+  var ss = getSpreadsheet();
+  var headers = [
+    "STT", "Thời Gian Gửi", "Ngày Làm", "Công Nhân", "Khách Hàng", "Tên Sản Phẩm",
+    "Mã PO", "Nguyên Công", "Máy Gia Công", "SL Đạt (OK)", "SL Xử Lý", "SL Hủy",
+    "Lương Khoán (VNĐ)", "Vật Tư", "SL Tiêu Hao", "Phút Dừng Máy", "Ghi Chú", "Link Ảnh Drive"
+  ];
+
+  CANONICAL_MACHINES.forEach(function(m) {
+    var sheetName = m.code;
+    var sheet = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName);
+    
+    if (sheet.getLastRow() === 0) {
+      var rangeH = sheet.getRange(1, 1, 1, headers.length);
+      rangeH.setValues([headers])
+            .setFontWeight("bold")
+            .setBackground("#15803d")
+            .setFontColor("#ffffff")
+            .setHorizontalAlignment("center");
+      sheet.setRowHeight(1, 32);
+      sheet.setFrozenRows(1);
+    }
+
+    // Công thức động FILTER kéo dữ liệu từ 'Nhật Ký Sản Lượng' theo đúng tên máy
+    var formula = "=IFERROR(FILTER('Nhật Ký Sản Lượng'!A2:R, 'Nhật Ký Sản Lượng'!I2:I = \"" + m.name + "\"), \"\")";
+    sheet.getRange("A2").setFormula(formula);
+  });
+
+  Logger.log("✅ Đã khởi tạo và gán công thức FILTER động cho trọn bộ 17 Sheet máy!");
+  return "Đã khởi tạo và cấu hình công thức FILTER tự động cho 17 Sheet máy thành công!";
+}
+
 
 
 
