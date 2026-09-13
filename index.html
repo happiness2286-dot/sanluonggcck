@@ -231,8 +231,34 @@
                 <div id="photoPreviewGrid" class="photo-preview-grid"></div>
             </div>
 
+            <!-- Section 4: Machine Run Hours & Downtime (OEE) -->
+            <div class="card-title" style="margin-top: 24px;">
+                <span>4. THỜI GIAN VẬN HÀNH MÁY & DỪNG MÁY (OEE)</span>
+                <span class="icon-badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">OEE CHUẨN</span>
+            </div>
+
+            <!-- Shift Selection & Start - End Time -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 12px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Ca làm việc (*)</label>
+                    <select id="shiftSelect" class="form-select">
+                        <option value="Ca 1">Ca 1 (Sáng 06h-14h)</option>
+                        <option value="Ca 2">Ca 2 (Chiều 14h-22h)</option>
+                        <option value="Ca 3">Ca 3 (Đêm 22h-06h)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">⏰ Giờ Bắt Đầu (*)</label>
+                    <input type="time" id="startTimeInput" class="form-input" value="06:00">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">⏰ Giờ Kết Thúc (*)</label>
+                    <input type="time" id="endTimeInput" class="form-input" value="14:00">
+                </div>
+            </div>
+
             <!-- Incident / Downtime -->
-            <div class="form-group" style="margin-top: 20px;">
+            <div class="form-group" style="margin-top: 14px;">
                 <label class="form-label">Thời gian phát sinh / Dừng máy (Phút)</label>
                 <div class="pill-grid">
                     <button class="pill-btn" data-min="15">15 Phút</button>
@@ -251,8 +277,21 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Ghi chú chi tiết phát sinh (Nếu có)</label>
-                <input type="text" id="downtimeNoteInput" class="form-input" placeholder="Nhập nguyên nhân dừng máy (Chờ phôi, hỏng dao, sự cố máy...)">
+                <label class="form-label">Lý do dừng máy (Nếu có dừng)</label>
+                <select id="downtimeReasonSelect" class="form-select">
+                    <option value="">-- Không có dừng máy (Chạy bình thường) --</option>
+                    <option value="DT-01: Chờ phôi / Phôi đúc lỗi">DT-01: Chờ phôi / Phôi đúc lỗi</option>
+                    <option value="DT-02: Sự cố máy / Hỏng thiết bị">DT-02: Sự cố máy / Hỏng thiết bị</option>
+                    <option value="DT-03: Thay dao / Mảnh dao mòn / Mẻ dao">DT-03: Thay dao / Mảnh dao mòn / Mẻ dao</option>
+                    <option value="DT-04: Gá đặt phôi / Rà đồ gá">DT-04: Gá đặt phôi / Rà đồ gá</option>
+                    <option value="DT-05: Chờ KCS / Lập trình CAM">DT-05: Chờ KCS / Lập trình CAM</option>
+                    <option value="DT-06: Mất điện / Thiếu khí nén / Khác">DT-06: Mất điện / Thiếu khí nén / Khác</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">📝 Ghi chú chi tiết & Bàn giao ca sau</label>
+                <input type="text" id="downtimeNoteInput" class="form-input" placeholder="Tình trạng chi tiết dở dang, tọa độ G54, nhắc nhở ca sau...">
             </div>
 
             <!-- Submit Button -->

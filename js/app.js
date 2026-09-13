@@ -1076,6 +1076,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const reportDate = (reportDateInput && reportDateInput.value) ? reportDateInput.value : getTodayDateString();
 
+        const shiftVal = document.getElementById('shiftSelect') ? document.getElementById('shiftSelect').value : 'Ca 1';
+        const startTimeVal = document.getElementById('startTimeInput') ? document.getElementById('startTimeInput').value : '06:00';
+        const endTimeVal = document.getElementById('endTimeInput') ? document.getElementById('endTimeInput').value : '14:00';
+        const downtimeReasonVal = document.getElementById('downtimeReasonSelect') ? document.getElementById('downtimeReasonSelect').value : '';
+        const rawNote = downtimeNoteInput.value.trim();
+
+        let combinedNote = `[${shiftVal}: ${startTimeVal}-${endTimeVal}]`;
+        if (downtimeReasonVal) combinedNote += ` [${downtimeReasonVal}]`;
+        if (rawNote) combinedNote += ` ${rawNote}`;
+
         const newLog = {
             id: Date.now(),
             worker: currentUser.name,
@@ -1084,6 +1094,10 @@ document.addEventListener('DOMContentLoaded', () => {
             product: product,
             po: 'PO-' + Math.floor(1000 + Math.random() * 9000),
             date: reportDate,
+            shift: shiftVal,
+            start_time: startTimeVal,
+            end_time: endTimeVal,
+            downtime_reason: downtimeReasonVal,
             op: op,
             qty_dat: qtyDat,
             qty_xuly: qtyXuLy,
@@ -1098,7 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             material: material || 'Không tiêu hao',
             qty_material: qtyMat,
             downtime_min: downtimeMin,
-            downtime_note: downtimeNoteInput.value || 'Bình thường'
+            downtime_note: combinedNote
         };
 
         // Google Sheets Integration URL Sync (Hardcoded URL cố định cho mọi thiết bị)
