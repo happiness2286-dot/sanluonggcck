@@ -2855,43 +2855,43 @@ function applyLiveFormulasToAllSheets() {
 
     for (var r = 5; r <= 19; r++) {
       // Cột E: Số ca làm việc theo bộ lọc kỳ lương (Từ Ngày $D$2 đến Đến Ngày $F$2)
-      wageSheet.getRange(r, 5).setFormula("=IFERROR(COUNTUNIQUE(FILTER('" + logName + "'!$Z:$Z, '" + logName + "'!$Y:$Y = B" + r + ", '" + logName + "'!$C:$C >= $D$2, '" + logName + "'!$C:$C <= $F$2)), 0)");
+      wageSheet.getRange(r, 5).setFormula('=IFERROR(COUNTUNIQUE(FILTER(\'' + logName + '\'!$Z:$Z, \'' + logName + '\'!$Y:$Y = B' + r + ', \'' + logName + '\'!$C:$C >= $D$2, \'' + logName + '\'!$C:$C <= $F$2)), 0)');
       
       // Cột F: Tổng giờ chạy máy (h) = Số ca * 8h
-      wageSheet.getRange(r, 6).setFormula("=E" + r + "*8");
+      wageSheet.getRange(r, 6).setFormula('=E' + r + '*8');
       
       // Cột G: Tổng SL Đạt KCS (OK) - Cột AB bên nhật ký
-      wageSheet.getRange(r, 7).setFormula("=IFERROR(SUMIFS('" + logName + "'!$AB:$AB, '" + logName + "'!$Y:$Y, B" + r + ", '" + logName + "'!$C:$C, ">=" & $D$2, '" + logName + "'!$C:$C, "<=" & $F$2), 0)");
+      wageSheet.getRange(r, 7).setFormula('=IFERROR(SUMIFS(\'' + logName + '\'!$AB:$AB, \'' + logName + '\'!$Y:$Y, B' + r + ', \'' + logName + '\'!$C:$C, ">=" & $D$2, \'' + logName + '\'!$C:$C, "<=" & $F$2), 0)');
       
       // Cột H: Tổng SL Hỏng (NG) - Cột L bên nhật ký
-      wageSheet.getRange(r, 8).setFormula("=IFERROR(SUMIFS('" + logName + "'!$L:$L, '" + logName + "'!$Y:$Y, B" + r + ", '" + logName + "'!$C:$C, ">=" & $D$2, '" + logName + "'!$C:$C, "<=" & $F$2), 0)");
+      wageSheet.getRange(r, 8).setFormula('=IFERROR(SUMIFS(\'' + logName + '\'!$L:$L, \'' + logName + '\'!$Y:$Y, B' + r + ', \'' + logName + '\'!$C:$C, ">=" & $D$2, \'' + logName + '\'!$C:$C, "<=" & $F$2), 0)');
       
       // Cột I: Tiền Khoán Tạm Tính (Toàn bộ sản lượng báo cáo)
-      wageSheet.getRange(r, 9).setFormula("=IFERROR(SUMIFS('" + logName + "'!$M:$M, '" + logName + "'!$Y:$Y, B" + r + ", '" + logName + "'!$C:$C, ">=" & $D$2, '" + logName + "'!$C:$C, "<=" & $F$2), 0)");
+      wageSheet.getRange(r, 9).setFormula('=IFERROR(SUMIFS(\'' + logName + '\'!$M:$M, \'' + logName + '\'!$Y:$Y, B' + r + ', \'' + logName + '\'!$C:$C, ">=" & $D$2, \'' + logName + '\'!$C:$C, "<=" & $F$2), 0)');
       
       // Cột J: Tiền Khoán Đủ Điều Kiện (Chỉ tính sản lượng KCS ĐÃ DUYỆT)
-      wageSheet.getRange(r, 10).setFormula("=IFERROR(SUMIFS('" + logName + "'!$M:$M, '" + logName + "'!$Y:$Y, B" + r + ", '" + logName + "'!$C:$C, ">=" & $D$2, '" + logName + "'!$C:$C, "<=" & $F$2, '" + logName + "'!$AE:$AE, "ĐÃ DUYỆT"), 0)");
+      wageSheet.getRange(r, 10).setFormula('=IFERROR(SUMIFS(\'' + logName + '\'!$M:$M, \'' + logName + '\'!$Y:$Y, B' + r + ', \'' + logName + '\'!$C:$C, ">=" & $D$2, \'' + logName + '\'!$C:$C, "<=" & $F$2, \'' + logName + '\'!$AE:$AE, "ĐÃ DUYỆT"), 0)');
       
       // Cột K: Trừ Phạt Phế Phẩm (Mặc định 0)
       wageSheet.getRange(r, 11).setValue(0);
       
       // Cột L: Lương Khoán Thực Lĩnh Đã Chốt (Nếu kỳ đã khóa sổ thì bằng Tiền đủ điều kiện - Phạt)
-      wageSheet.getRange(r, 12).setFormula("=IF($H$2="ĐÃ KHÓA SỔ", J" + r + "-K" + r + ", IFERROR(SUMIFS('" + logName + "'!$M:$M, '" + logName + "'!$Y:$Y, B" + r + ", '" + logName + "'!$C:$C, ">=" & $D$2, '" + logName + "'!$C:$C, "<=" & $F$2, '" + logName + "'!$AG:$AG, "ĐÃ KHÓA SỔ") - K" + r + ", 0))");
+      wageSheet.getRange(r, 12).setFormula('=IF($H$2="ĐÃ KHÓA SỔ", J' + r + '-K' + r + ', IFERROR(SUMIFS(\'' + logName + '\'!$M:$M, \'' + logName + '\'!$Y:$Y, B' + r + ', \'' + logName + '\'!$C:$C, ">=" & $D$2, \'' + logName + '\'!$C:$C, "<=" & $F$2, \'' + logName + '\'!$AG:$AG, "ĐÃ KHÓA SỔ") - K' + r + ', 0))');
       
       // Cột M: Ghi Chú Trạng Thái Chốt
-      wageSheet.getRange(r, 13).setFormula("=IF($H$2="ĐÃ KHÓA SỔ", "Đã chốt lương kỳ này", "Kỳ đang mở (Tạm tính)")");
+      wageSheet.getRange(r, 13).setFormula('=IF($H$2="ĐÃ KHÓA SỔ", "Đã chốt lương kỳ này", "Kỳ đang mở (Tạm tính)")');
     }
 
     // Dòng 20: TỔNG CỘNG QUỸ LƯƠNG KHOÁN (SUM 15 THỢ TỪ DÒNG 5 ĐẾN 19)
-    wageSheet.getRange(20, 5).setFormula("=SUM(E5:E19)");
-    wageSheet.getRange(20, 6).setFormula("=SUM(F5:F19)");
-    wageSheet.getRange(20, 7).setFormula("=SUM(G5:G19)");
-    wageSheet.getRange(20, 8).setFormula("=SUM(H5:H19)");
-    wageSheet.getRange(20, 9).setFormula("=SUM(I5:I19)");
-    wageSheet.getRange(20, 10).setFormula("=SUM(J5:J19)");
-    wageSheet.getRange(20, 11).setFormula("=SUM(K5:K19)");
-    wageSheet.getRange(20, 12).setFormula("=SUM(L5:L19)");
-    wageSheet.getRange(20, 13).setFormula("=IF($H$2="ĐÃ KHÓA SỔ", "KHỚP 100% NHẬT KÝ ĐÃ KHÓA", "KỲ ĐANG MỞ")");
+    wageSheet.getRange(20, 5).setFormula('=SUM(E5:E19)');
+    wageSheet.getRange(20, 6).setFormula('=SUM(F5:F19)');
+    wageSheet.getRange(20, 7).setFormula('=SUM(G5:G19)');
+    wageSheet.getRange(20, 8).setFormula('=SUM(H5:H19)');
+    wageSheet.getRange(20, 9).setFormula('=SUM(I5:I19)');
+    wageSheet.getRange(20, 10).setFormula('=SUM(J5:J19)');
+    wageSheet.getRange(20, 11).setFormula('=SUM(K5:K19)');
+    wageSheet.getRange(20, 12).setFormula('=SUM(L5:L19)');
+    wageSheet.getRange(20, 13).setFormula('=IF($H$2="ĐÃ KHÓA SỔ", "KHỚP 100% NHẬT KÝ ĐÃ KHÓA", "KỲ ĐANG MỞ")');
   }
 
   // 2. CÔNG THỨC SỐNG CHO SHEET '06_Ke_Hoach_Tien_Do_PO' (CHỈ TÍNH NGUYÊN CÔNG CUỐI CỘT O)
@@ -2900,22 +2900,22 @@ function applyLiveFormulasToAllSheets() {
     var lastPoRow = poSheet.getLastRow();
     for (var p = 4; p <= lastPoRow; p++) {
       // Cột F: BTP Xong Tại Xưởng = CHỈ CỘNG NGUYÊN CÔNG CUỐI CỘT O
-      poSheet.getRange(p, 6).setFormula("=IF(O" + p + "<>"", IFERROR(SUMIFS('" + logName + "'!$AB:$AB, '" + logName + "'!$G:$G, B" + p + ", '" + logName + "'!$H:$H, "*" & O" + p + " & "*"), 0), IFERROR(SUMIFS('" + logName + "'!$AB:$AB, '" + logName + "'!$G:$G, B" + p + "), 0))");
+      poSheet.getRange(p, 6).setFormula('=IF(O' + p + '<>"", IFERROR(SUMIFS(\'' + logName + '\'!$AB:$AB, \'' + logName + '\'!$G:$G, B' + p + ', \'' + logName + '\'!$H:$H, "*" & O' + p + ' & "*"), 0), IFERROR(SUMIFS(\'' + logName + '\'!$AB:$AB, \'' + logName + '\'!$G:$G, B' + p + '), 0))');
       
       // Cột G: Đã Bàn Giao Đi (Tra từ sổ luân chuyển BTP 09)
-      poSheet.getRange(p, 7).setFormula("=IFERROR(SUMIFS('09_Truy_Xuat_BTP_Luan_Chuyen'!$G:$G, '09_Truy_Xuat_BTP_Luan_Chuyen'!$C:$C, B" + p + "), 0)");
+      poSheet.getRange(p, 7).setFormula('=IFERROR(SUMIFS(\'09_Truy_Xuat_BTP_Luan_Chuyen\'!$G:$G, \'09_Truy_Xuat_BTP_Luan_Chuyen\'!$C:$C, B' + p + '), 0)');
       
       // Cột H: Tồn Chờ Bàn Giao (WIP) = BTP Xong - Đã Bàn Giao
-      poSheet.getRange(p, 8).setFormula("=MAX(0, F" + p + "-G" + p + ")");
+      poSheet.getRange(p, 8).setFormula('=MAX(0, F' + p + '-G' + p + ')');
       
       // Cột I: Còn Nợ Kế Hoạch = Kế hoạch - Đã Bàn Giao
-      poSheet.getRange(p, 9).setFormula("=MAX(0, E" + p + "-G" + p + ")");
+      poSheet.getRange(p, 9).setFormula('=MAX(0, E' + p + '-G' + p + ')');
       
       // Cột M: Tiến Độ Bàn Giao (%)
-      poSheet.getRange(p, 13).setFormula("=IF(E" + p + ">0, G" + p + "/E" + p + ", 0)");
+      poSheet.getRange(p, 13).setFormula('=IF(E' + p + '>0, G' + p + '/E' + p + ', 0)');
       
       // Cột N: Trạng Thái Điều Độ (Cảnh báo rõ trường hợp bàn giao vượt kế hoạch)
-      poSheet.getRange(p, 14).setFormula("=IF(G" + p + ">E" + p + ", "⚠️ BÀN GIAO VƯỢT KH (" & TEXT(G" + p + "-E" + p + ", "#,##0") & " CT)", IF(G" + p + ">=E" + p + ", "Đã bàn giao đủ", IF(F" + p + ">=E" + p + ", "Xong xưởng - Chờ chuyển", IF(F" + p + ">0, "Đang gia công trên máy", "Chờ nhận phôi đúc"))))");
+      poSheet.getRange(p, 14).setFormula('=IF(G' + p + '>E' + p + ', "⚠️ BÀN GIAO VƯỢT KH (" & TEXT(G' + p + '-E' + p + ', "#,##0") & " CT)", IF(G' + p + '>=E' + p + ', "Đã bàn giao đủ", IF(F' + p + '>=E' + p + ', "Xong xưởng - Chờ chuyển", IF(F' + p + '>0, "Đang gia công trên máy", "Chờ nhận phôi đúc"))))');
     }
     poSheet.getRange("E4:I" + lastPoRow).setNumberFormat("#,##0");
     poSheet.getRange("M4:M" + lastPoRow).setNumberFormat("0.0%");
@@ -2934,49 +2934,49 @@ function applyLiveFormulasToAllSheets() {
 
     for (var m = 4; m <= 20; m++) {
       // Cột F: Thời Gian Kế Hoạch (Phút) = Số ca * 480
-      oeeSheet.getRange(m, 6).setFormula("=E" + m + "*480");
+      oeeSheet.getRange(m, 6).setFormula('=E' + m + '*480');
       
       // Cột H: Thời Gian Chạy Thực (Phút) = Kế hoạch - Dừng sự cố - Dừng nghỉ ca (Không vượt quá kế hoạch!)
-      oeeSheet.getRange(m, 8).setFormula("=MAX(0, F" + m + "-G" + m + "-E" + m + "*30)");
+      oeeSheet.getRange(m, 8).setFormula('=MAX(0, F' + m + '-G' + m + '-E' + m + '*30)');
       
       // Cột I: Độ Sẵn Sàng A (%) = Chạy thực / Kế hoạch (Luôn <= 93.75% <= 100%)
-      oeeSheet.getRange(m, 9).setFormula("=IF(F" + m + ">0, H" + m + "/F" + m + ", 0)");
+      oeeSheet.getRange(m, 9).setFormula('=IF(F' + m + '>0, H' + m + '/F' + m + ', 0)');
       
       // Cột L: Tỷ Lệ Chất Lượng Q (%) = Đạt / Tổng
-      oeeSheet.getRange(m, 12).setFormula("=IF(J" + m + ">0, K" + m + "/J" + m + ", 1)");
+      oeeSheet.getRange(m, 12).setFormula('=IF(J' + m + '>0, K' + m + '/J' + m + ', 1)');
       
       // Cột N: Hiệu Suất Vận Hành P (%) = Tổng Phút Chuẩn (M) / Phút Chạy Thực (H)
-      oeeSheet.getRange(m, 14).setFormula("=IF(H" + m + ">0, MIN(1.0, M" + m + "/H" + m + "), 0.85)");
+      oeeSheet.getRange(m, 14).setFormula('=IF(H' + m + '>0, MIN(1.0, M' + m + '/H' + m + '), 0.85)');
       
       // Cột O: CHỈ SỐ OEE (%) = A * Q * P
-      oeeSheet.getRange(m, 15).setFormula("=I" + m + "*L" + m + "*N" + m + "");
+      oeeSheet.getRange(m, 15).setFormula('=I' + m + '*L' + m + '*N' + m + '');
       
       // Cột P: Xếp Hạng Đánh Giá OEE
-      oeeSheet.getRange(m, 16).setFormula("=IF(O" + m + ">=0.85, "ĐẲNG CẤP THẾ GIỚI (>=85%)", IF(O" + m + ">=0.7, "VẬN HÀNH TỐT (70-84%)", IF(O" + m + ">=0.55, "TRUNG BÌNH (55-69%)", "CẢNH BÁO NGHẼN/KÉM (<55%)")))");
+      oeeSheet.getRange(m, 16).setFormula('=IF(O' + m + '>=0.85, "ĐẲNG CẤP THẾ GIỚI (>=85%)", IF(O' + m + '>=0.7, "VẬN HÀNH TỐT (70-84%)", IF(O' + m + '>=0.55, "TRUNG BÌNH (55-69%)", "CẢNH BÁO NGHẼN/KÉM (<55%)")))');
     }
     
     // Dòng 21: TỔNG HỢP TOÀN NHÀ MÁY (17 MÁY)
-    oeeSheet.getRange(21, 5).setFormula("=SUM(E4:E20)");
-    oeeSheet.getRange(21, 6).setFormula("=SUM(F4:F20)");
-    oeeSheet.getRange(21, 7).setFormula("=SUM(G4:G20)");
-    oeeSheet.getRange(21, 8).setFormula("=SUM(H4:H20)");
-    oeeSheet.getRange(21, 9).setFormula("=IF(F21>0, H21/F21, 0)");
-    oeeSheet.getRange(21, 10).setFormula("=SUM(J4:J20)");
-    oeeSheet.getRange(21, 11).setFormula("=SUM(K4:K20)");
-    oeeSheet.getRange(21, 12).setFormula("=IF(J21>0, K21/J21, 1)");
-    oeeSheet.getRange(21, 13).setFormula("=SUM(M4:M20)");
-    oeeSheet.getRange(21, 14).setFormula("=IF(H21>0, M21/H21, 0)");
-    oeeSheet.getRange(21, 15).setFormula("=I21*L21*N21");
-    oeeSheet.getRange(21, 16).setFormula("=IF(O21>=0.85, "ĐẲNG CẤP THẾ GIỚI", IF(O21>=0.7, "VẬN HÀNH TỐT", "CẦN CẢI TIẾN"))");
+    oeeSheet.getRange(21, 5).setFormula('=SUM(E4:E20)');
+    oeeSheet.getRange(21, 6).setFormula('=SUM(F4:F20)');
+    oeeSheet.getRange(21, 7).setFormula('=SUM(G4:G20)');
+    oeeSheet.getRange(21, 8).setFormula('=SUM(H4:H20)');
+    oeeSheet.getRange(21, 9).setFormula('=IF(F21>0, H21/F21, 0)');
+    oeeSheet.getRange(21, 10).setFormula('=SUM(J4:J20)');
+    oeeSheet.getRange(21, 11).setFormula('=SUM(K4:K20)');
+    oeeSheet.getRange(21, 12).setFormula('=IF(J21>0, K21/J21, 1)');
+    oeeSheet.getRange(21, 13).setFormula('=SUM(M4:M20)');
+    oeeSheet.getRange(21, 14).setFormula('=IF(H21>0, M21/H21, 0)');
+    oeeSheet.getRange(21, 15).setFormula('=I21*L21*N21');
+    oeeSheet.getRange(21, 16).setFormula('=IF(O21>=0.85, "ĐẲNG CẤP THẾ GIỚI", IF(O21>=0.7, "VẬN HÀNH TỐT", "CẦN CẢI TIẾN"))');
   }
 
   // 4. CÔNG THỨC SỐNG CHO SHEET '03_Can_Bang_Tai_17_May'
   var maySheet = ss.getSheetByName("03_Can_Bang_Tai_17_May");
   if (maySheet && maySheet.getLastRow() >= 4) {
     for (var m2 = 4; m2 <= 20; m2++) {
-      maySheet.getRange(m2, 8).setFormula("=IF(F" + m2 + ">0, G" + m2 + "/F" + m2 + ", 0)");
-      maySheet.getRange(m2, 9).setFormula("=IF(H" + m2 + ">1.2, "NGHẼN NẶNG", IF(H" + m2 + ">=1.0, "CẢNH BÁO QUÁ TẢI", IF(H" + m2 + ">=0.75, "TẢI TỐI ƯU", "DƯ NĂNG LỰC")))");
-      maySheet.getRange(m2, 10).setFormula("=MAX(0, G" + m2 + "-F" + m2 + ")");
+      maySheet.getRange(m2, 8).setFormula('=IF(F' + m2 + '>0, G' + m2 + '/F' + m2 + ', 0)');
+      maySheet.getRange(m2, 9).setFormula('=IF(H' + m2 + '>1.2, "NGHẼN NẶNG", IF(H' + m2 + '>=1.0, "CẢNH BÁO QUÁ TẢI", IF(H' + m2 + '>=0.75, "TẢI TỐI ƯU", "DƯ NĂNG LỰC")))');
+      maySheet.getRange(m2, 10).setFormula('=MAX(0, G' + m2 + '-F' + m2 + ')');
     }
     maySheet.getRange("H4:H20").setNumberFormat("0.0%");
   }
@@ -2984,31 +2984,31 @@ function applyLiveFormulasToAllSheets() {
   // 5. CÔNG THỨC SỐNG CHO SHEET '01_Tong_Quan_Dashboard' (ĐẦY ĐỦ 100% CÁC CỘT KHÁCH HÀNG)
   var dashSheet = ss.getSheetByName("01_Tong_Quan_Dashboard");
   if (dashSheet) {
-    dashSheet.getRange("B5").setFormula("=COUNTA('06_Ke_Hoach_Tien_Do_PO'!B4:B500)");
-    dashSheet.getRange("D5").setFormula("=SUM('06_Ke_Hoach_Tien_Do_PO'!F4:F500)");
-    dashSheet.getRange("F5").setFormula("=SUM('06_Ke_Hoach_Tien_Do_PO'!H4:H500)");
-    dashSheet.getRange("H5").setFormula("=COUNTIF('03_Can_Bang_Tai_17_May'!I4:I20, "NGHẼN NẶNG")");
-    dashSheet.getRange("J5").setFormula("=COUNTIF('02_Canh_Bao_Qua_Tai_SubCon'!L5:L50, "*GIA CÔNG NGOÀI*")");
-    dashSheet.getRange("L5").setFormula("=IF(SUM('" + logName + "'!J:J)>0, SUM('" + logName + "'!L:L)/(SUM('" + logName + "'!J:J)+SUM('" + logName + "'!L:L)), 0.012)");
+    dashSheet.getRange("B5").setFormula('=COUNTA(\'06_Ke_Hoach_Tien_Do_PO\'!B4:B500)');
+    dashSheet.getRange("D5").setFormula('=SUM(\'06_Ke_Hoach_Tien_Do_PO\'!F4:F500)');
+    dashSheet.getRange("F5").setFormula('=SUM(\'06_Ke_Hoach_Tien_Do_PO\'!H4:H500)');
+    dashSheet.getRange("H5").setFormula('=COUNTIF(\'03_Can_Bang_Tai_17_May\'!I4:I20, "NGHẼN NẶNG")');
+    dashSheet.getRange("J5").setFormula('=COUNTIF(\'02_Canh_Bao_Qua_Tai_SubCon\'!L5:L50, "*GIA CÔNG NGOÀI*")');
+    dashSheet.getRange("L5").setFormula('=IF(SUM(\'' + logName + '\'!J:J)>0, SUM(\'' + logName + '\'!L:L)/(SUM(\'' + logName + '\'!J:J)+SUM(\'' + logName + '\'!L:L)), 0.012)');
     dashSheet.getRange("L5").setNumberFormat("0.0%");
 
     for (var c = 9; c <= 17; c++) {
-      dashSheet.getRange(c, 4).setFormula("=COUNTIF('06_Ke_Hoach_Tien_Do_PO'!$C$4:$C$500, "*" & B" + c + " & "*")");
-      dashSheet.getRange(c, 5).setFormula("=SUMIFS('06_Ke_Hoach_Tien_Do_PO'!$E$4:$E$500, '06_Ke_Hoach_Tien_Do_PO'!$C$4:$C$500, "*" & B" + c + " & "*")");
-      dashSheet.getRange(c, 6).setFormula("=SUMIFS('06_Ke_Hoach_Tien_Do_PO'!$F$4:$F$500, '06_Ke_Hoach_Tien_Do_PO'!$C$4:$C$500, "*" & B" + c + " & "*")");
-      dashSheet.getRange(c, 7).setFormula("=SUMIFS('06_Ke_Hoach_Tien_Do_PO'!$G$4:$G$500, '06_Ke_Hoach_Tien_Do_PO'!$C$4:$C$500, "*" & B" + c + " & "*")");
-      dashSheet.getRange(c, 8).setFormula("=MAX(0, F" + c + "-G" + c + ")");
-      dashSheet.getRange(c, 9).setFormula("=MAX(0, E" + c + "-G" + c + ")");
-      dashSheet.getRange(c, 10).setFormula("=IF(E" + c + ">0, G" + c + "/E" + c + ", 0)");
-      dashSheet.getRange(c, 11).setFormula("=IF(J" + c + ">=1, "Hoàn thành 100%", IF(F" + c + ">=E" + c + ", "Đã xong - Chờ giao", IF(F" + c + ">0, "Đang gia công", "Chờ phôi đúc")))");
+      dashSheet.getRange(c, 4).setFormula('=COUNTIF(\'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*")');
+      dashSheet.getRange(c, 5).setFormula('=SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$E$4:$E$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*")');
+      dashSheet.getRange(c, 6).setFormula('=SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$F$4:$F$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*")');
+      dashSheet.getRange(c, 7).setFormula('=SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$G$4:$G$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*")');
+      dashSheet.getRange(c, 8).setFormula('=MAX(0, F' + c + '-G' + c + ')');
+      dashSheet.getRange(c, 9).setFormula('=MAX(0, E' + c + '-G' + c + ')');
+      dashSheet.getRange(c, 10).setFormula('=IF(E' + c + '>0, G' + c + '/E' + c + ', 0)');
+      dashSheet.getRange(c, 11).setFormula('=IF(J' + c + '>=1, "Hoàn thành 100%", IF(F' + c + '>=E' + c + ', "Đã xong - Chờ giao", IF(F' + c + '>0, "Đang gia công", "Chờ phôi đúc")))');
     }
-    dashSheet.getRange(18, 4).setFormula("=SUM(D9:D17)");
-    dashSheet.getRange(18, 5).setFormula("=SUM(E9:E17)");
-    dashSheet.getRange(18, 6).setFormula("=SUM(F9:F17)");
-    dashSheet.getRange(18, 7).setFormula("=SUM(G9:G17)");
-    dashSheet.getRange(18, 8).setFormula("=SUM(H9:H17)");
-    dashSheet.getRange(18, 9).setFormula("=SUM(I9:I17)");
-    dashSheet.getRange(18, 10).setFormula("=IF(E18>0, G18/E18, 0)");
+    dashSheet.getRange(18, 4).setFormula('=SUM(D9:D17)');
+    dashSheet.getRange(18, 5).setFormula('=SUM(E9:E17)');
+    dashSheet.getRange(18, 6).setFormula('=SUM(F9:F17)');
+    dashSheet.getRange(18, 7).setFormula('=SUM(G9:G17)');
+    dashSheet.getRange(18, 8).setFormula('=SUM(H9:H17)');
+    dashSheet.getRange(18, 9).setFormula('=SUM(I9:I17)');
+    dashSheet.getRange(18, 10).setFormula('=IF(E18>0, G18/E18, 0)');
     dashSheet.getRange("D9:I18").setNumberFormat("#,##0");
     dashSheet.getRange("J9:J18").setNumberFormat("0.0%");
   }
