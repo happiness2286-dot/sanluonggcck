@@ -2718,8 +2718,11 @@ function calculateAndPopulateAllSheets() {
   var wageSheet = ss.getSheetByName("10_Bang_Luong_Khoan_Tho");
   var filterFromDate = "2026-08-01";
   var filterToDate = "2026-08-31"; // Mặc định kỳ lương Tháng 8
+  var filterPeriod = "Tháng 08/2026";
+  var filterStart = "2026-08-01";
   var isLockedPeriod = true;
   if (wageSheet && wageSheet.getLastRow() >= 2) {
+    filterPeriod = String(wageSheet.getRange("B2").getValue() || "Tháng 08/2026");
     var dValFrom = wageSheet.getRange("D2").getValue();
     var dValTo = wageSheet.getRange("F2").getValue();
     var statusVal = String(wageSheet.getRange("H2").getValue() || "").trim().toUpperCase();
