@@ -4426,32 +4426,24 @@ function baiThuKiemTraNghiemThu10Diem() {
   logSheet.deleteRow(actualR);
   calculateAndPopulateAllSheets();
 
-  var resultMsg = "🎉 KẾT QUẢ KIỂM ĐỊNH NGHIỆM THU 10 ĐIỂM (ĐẠT 100% TIÊU CHUẨN):
-
-" +
-                  "1. CHU TRÌNH 3 CẤP LƯƠNG KHOÁN:
-" +
-                  "   • Bước 1 (Nhập 2 SP x 35.000đ): Tạm tính=" + formatVND(b1_tam) + " | Đủ ĐK=" + formatVND(b1_du) + " | Thực lĩnh=" + formatVND(b1_thuc) + " [ĐẠT]
-" +
-                  "   • Bước 2 (KCS duyệt Đạt):      Tạm tính=" + formatVND(b2_tam) + " | Đủ ĐK=" + formatVND(b2_du) + " | Thực lĩnh=" + formatVND(b2_thuc) + " [ĐẠT]
-" +
-                  "   • Bước 3 (Quản đốc duyệt):     Tạm tính=" + formatVND(b3_tam) + " | Đủ ĐK=" + formatVND(b3_du) + " | Thực lĩnh=" + formatVND(b3_thuc) + " [ĐẠT]
-" +
-                  "   • Bước 4 (Khóa sổ):           Tạm tính=" + formatVND(b4_tam) + " | Đủ ĐK=" + formatVND(b4_du) + " | Thực lĩnh=" + formatVND(b4_thuc) + " [ĐẠT]
-" +
-                  "   • Bước 5 (Lỗi do thợ):         Đủ ĐK=" + formatVND(b5_du) + " | Lỗi thợ=" + formatVND(b5_loitho) + " | Thực lĩnh=" + formatVND(b5_thuc) + " (0% lương) [ĐẠT]
-
-" +
-                  "2. ĐỐI SOÁT DASHBOARD - BẢNG PO:
-" +
-                  "   • Chênh lệch: = 0 (Khớp 100% với 61 PO, 2.124 kế hoạch, 44.8 BTP, 918 đã giao, 29.5 WIP)
-" +
-                  "   • Mã KH (KH01 - KH09): Tự động tổng hợp chính xác theo mã, không dùng tên tự do
-
-" +
-                  "3. OEE THIẾT BỊ: Đã tách riêng P_thô và P_tính_OEE (chặn trần 100%)
-" +
-                  "4. AN TOÀN DỮ LIỆU: Đã bổ sung Unique Record ID chống gửi trùng & 8 cột Audit Trail.";
+  var msgLines = [
+    "🎉 KẾT QUẢ KIỂM ĐỊNH NGHIỆM THU 10 ĐIỂM (ĐẠT 100% TIÊU CHUẨN):",
+    "",
+    "1. CHU TRÌNH 3 CẤP LƯƠNG KHOÁN:",
+    "   • Bước 1 (Nhập 2 SP x 35.000đ): Tạm tính=" + formatVND(b1_tam) + " | Đủ ĐK=" + formatVND(b1_du) + " | Thực lĩnh=" + formatVND(b1_thuc) + " [ĐẠT]",
+    "   • Bước 2 (KCS duyệt Đạt):      Tạm tính=" + formatVND(b2_tam) + " | Đủ ĐK=" + formatVND(b2_du) + " | Thực lĩnh=" + formatVND(b2_thuc) + " [ĐẠT]",
+    "   • Bước 3 (Quản đốc duyệt):     Tạm tính=" + formatVND(b3_tam) + " | Đủ ĐK=" + formatVND(b3_du) + " | Thực lĩnh=" + formatVND(b3_thuc) + " [ĐẠT]",
+    "   • Bước 4 (Khóa sổ):           Tạm tính=" + formatVND(b4_tam) + " | Đủ ĐK=" + formatVND(b4_du) + " | Thực lĩnh=" + formatVND(b4_thuc) + " [ĐẠT]",
+    "   • Bước 5 (Lỗi do thợ):         Đủ ĐK=" + formatVND(b5_du) + " | Lỗi thợ=" + formatVND(b5_loitho) + " | Thực lĩnh=" + formatVND(b5_thuc) + " (0% lương) [ĐẠT]",
+    "",
+    "2. ĐỐI SOÁT DASHBOARD - BẢNG PO:",
+    "   • Chênh lệch: = 0 (Khớp 100% với 61 PO, 2.124 kế hoạch, 44.8 BTP, 918 đã giao, 29.5 WIP)",
+    "   • Mã KH (KH01 - KH09): Tự động tổng hợp chính xác theo mã, không dùng tên tự do",
+    "",
+    "3. OEE THIẾT BỊ: Đã tách riêng P_thô và P_tính_OEE (chặn trần 100%)",
+    "4. AN TOÀN DỮ LIỆU: Đã bổ sung Unique Record ID chống gửi trùng & 8 cột Audit Trail."
+  ];
+  var resultMsg = msgLines.join("\n");
 
   Logger.log(resultMsg);
   SpreadsheetApp.getUi().alert("KẾT QUẢ NGHIỆM THU 10 ĐIỂM (ĐẠT CHUẨN 100%)", resultMsg, SpreadsheetApp.getUi().ButtonSet.OK);
