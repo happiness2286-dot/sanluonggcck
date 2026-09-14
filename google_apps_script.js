@@ -597,28 +597,28 @@ var STANDARDIZED_SHEETS_DATA = {
     ],
     [],
     [
-      "", "TỔNG LỆNH SX (PO)", "", "TỔNG BTP ĐÃ XONG", "", "BTP TỒN CHỜ BÀN GIAO (WIP)", "", "MÁY NGHẼN QUÁ TẢI (>120%)", "", "PO ĐỀ XUẤT GIA CÔNG NGOÀI", "", "TỶ LỆ PHẾ PHẨM TOÀN XƯỞNG"
+      "", "TỔNG LỆNH SX (PO)", "", "BTP TỒN CHỜ BÀN GIAO (WIP THEO PO)", "", "TỔNG SẢN LƯỢNG ĐANG GIA CÔNG TẠI CÁC NGUYÊN CÔNG", "", "TỔNG BTP HOÀN THÀNH TẠI XƯỞNG", "", "TỔNG SẢN PHẨM ĐÃ BÀN GIAO", "", "TỶ LỆ PHẾ PHẨM TOÀN XƯỞNG"
     ],
     [
-      "", 61, "", 2372, "", 380, "", 0, "", 1, "", 0.012
+      "", 61, "", 29.5, "", 1406, "", 44.75, "", 918, "", 0.012
     ],
     [],
     [
       "BẢNG 1: THEO DÕI ĐIỀU ĐỘ ĐƠN HÀNG THEO ĐỐI TÁC KHÁCH HÀNG CHI TIẾT"
     ],
     [
-      "STT", "Mã KH", "Tên Đối Tác Khách Hàng", "Số Lệnh SX (PO)", "Tổng SL Đặt (Chi tiết)", "BTP Xong Tại Xưởng", "Đã Bàn Giao Đi", "Tồn Chờ Bàn Giao (WIP)", "Còn Nợ Kế Hoạch", "Tiến Độ Bàn Giao (%)", "Đánh Giá Điều Độ"
+      "STT", "Khách Hàng", "Mặt Hàng Chủ Lực", "Số Lệnh SX (PO)", "Tổng SL Đặt (Chi tiết)", "BTP Xong Tại Xưởng", "Đã Bàn Giao Đi", "Tồn Chờ Bàn Giao (WIP)", "Còn Nợ Kế Hoạch", "Tiến Độ Bàn Giao (%)", "Đánh Giá Điều Độ"
     ],
-    ["1", "KH01", "Win-Win", 12, 1200, 850, 750, 100, 450, 0.625, "Đang gia công"],
-    ["2", "KH02", "UCC", 8, 850, 620, 550, 70, 300, 0.647, "Đang gia công"],
-    ["3", "KH03", "Vico- QLTB", 6, 500, 410, 380, 30, 120, 0.760, "Đang gia công"],
-    ["4", "KH04", "Hà Song Hải - XM Hạ Long", 15, 1450, 980, 890, 90, 560, 0.614, "Đang gia công"],
-    ["5", "KH05", "Hải- Vinh Quảng Ninh", 7, 720, 510, 460, 50, 260, 0.639, "Đang gia công"],
-    ["6", "KH06", "Thyssen", 5, 450, 390, 350, 40, 100, 0.778, "Đang gia công"],
-    ["7", "KH07", "Luợng- KS Tường Long", 4, 380, 310, 280, 30, 100, 0.737, "Đang gia công"],
-    ["8", "KH08", "TFG", 2, 180, 150, 140, 10, 40, 0.778, "Đang gia công"],
-    ["9", "KH09", "Molycop", 2, 200, 180, 160, 20, 40, 0.800, "Đang gia công"],
-    ["TỔNG CỘNG TOÀN NHÀ MÁY", "", "", 61, 5930, 4400, 3960, 440, 1970, 0.668, "ĐIỀU ĐỘ BÌNH THƯỜNG"]
+    ["1", "Thyssen", "Sealing strip, below / above (Thép hợp kim)", 13, 161, 28.25, 0, 28.25, 161, 0.0, "Đang gia công trên máy"],
+    ["2", "Win-Win", "Cánh xoắn đùn ISHIZUE (355Dw900, 318Dw800...)", 1, 1000, 0, 500, 0, 500, 0.500, "Chờ nhận phôi đúc"],
+    ["3", "Vico- QLTB", "Mẫu thử cơ tính CR, Mẫu kéo nén ASTM", 1, 500, 0, 0, 0, 500, 0.0, "Chờ nhận phôi đúc"],
+    ["4", "Luợng- KS Tường Long", "Ốp dao nhào trên (Bộ bên trái / bên phải)", 17, 96, 0, 2, 0, 94, 0.021, "Chờ nhận phôi đúc"],
+    ["5", "Molycop", "Bi đúc hợp kim cắt dây & mài từ", 9, 117, 0, 0, 0, 117, 0.0, "Chờ nhận phôi đúc"],
+    ["6", "Hà Song Hải - XM Hạ Long", "Thanh đập đá vôi (2240x510x145 - Thép Mn13)", 7, 7, 1.5, 1, 0.5, 6, 0.143, "Đang gia công trên máy"],
+    ["7", "Hải- Vinh Quảng Ninh", "Bộ rulo máy nghiền: Thân rô to (φ820x890)...", 6, 37, 15, 15, 0, 22, 0.405, "Đang gia công trên máy"],
+    ["8", "TFG", "Nut cover F3P00064, Chi tiết bản vẽ 2CG00820", 6, 6, 0, 0, 0, 6, 0.0, "Chờ nhận phôi đúc"],
+    ["9", "UCC", "Khuôn gá xích POWER, Bạc lót 4-210658-2", 1, 200, 0, 400, 0, 0, 2.000, "⚠️ BÀN GIAO VƯỢT KH"],
+    ["TỔNG CỘNG TOÀN NHÀ MÁY", "", "", 61, 2124, 44.75, 918, 29.5, 1406, 0.432, "ĐIỀU ĐỘ BÌNH THƯỜNG"]
   ],
   "02_Canh_Bao_Qua_Tai_SubCon": [
     [
