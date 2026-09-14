@@ -718,10 +718,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Product & Machine -> Operation Cascade Listener
     productSelect.addEventListener('change', () => {
         populateOperationsForProductAndMachine();
+        populatePOsForProduct();
+        updateWageCalculations();
     });
 
     machineSelect.addEventListener('change', () => {
         populateOperationsForProductAndMachine();
+        populatePOsForProduct();
+        updateWageCalculations();
     });
 
     operationSelect.addEventListener('change', () => {
@@ -1007,6 +1011,158 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // 11. Submit Production Log
+    
+    // ==============================================================================
+    // 🔒 CHUẨN HÓA KHÓA ĐƠN GIÁ, MÃ BẢN GHI DUY NHẤT & CHỐNG GỬI TRÙNG (GCCK 2026)
+    // ==============================================================================
+    const poSelect = document.getElementById('poSelect');
+    const poBadge = document.getElementById('poBadge');
+    const poPlanCount = document.getElementById('poPlanCount');
+    const lockedUnitWageInput = document.getElementById('lockedUnitWageInput');
+    const estimatedWageInput = document.getElementById('estimatedWageInput');
+    const previewRecordId = document.getElementById('previewRecordId');
+    const errorResponsibilityBox = document.getElementById('errorResponsibilityBox');
+    const errorResponsibilitySelect = document.getElementById('errorResponsibilitySelect');
+
+    // Lưu danh sách các Record ID đã gửi trong phiên làm việc để chống gửi trùng tuyệt đối
+    const submittedRecordIds = new Set(JSON.parse(localStorage.getItem('GCCK_SUBMITTED_RECORD_IDS') || '[]'));
+
+    // Hàm tạo mã bản ghi duy nhất: YYYYMMDD_MãNV_Ca_MãPO_MãNC_Timestamp
+    function generateUniqueRecordId() {
+        const rDate = (reportDateInput && reportDateInput.value) ? reportDateInput.value.replace(/[^0-9]/g, '') : new Date().toISOString().slice(0,10).replace(/[^0-9]/g, '');
+        const wId = (currentUser && currentUser.id) ? currentUser.id : 'NV01';
+        const shiftVal = document.getElementById('shiftSelect') ? document.getElementById('shiftSelect').value : 'Ca 1';
+        const shiftTag = shiftVal.indexOf('1') >= 0 ? 'C1' : (shiftVal.indexOf('2') >= 0 ? 'C2' : 'C3');
+        const poRaw = (poSelect && poSelect.value) ? poSelect.value.replace(/[^a-zA-Z0-9]/g, '') : 'PO2026';
+        const opVal = (operationSelect && operationSelect.value) ? operationSelect.value : 'NC1';
+        const opMatch = opVal.match(/NC\d+/i);
+        const opTag = opMatch ? opMatch[0].toUpperCase() : 'NC01';
+        const timeHex = Date.now().toString(36).slice(-4).toUpperCase();
+        return `${rDate}_${wId}_${shiftTag}_${poRaw}_${opTag}_${timeHex}`;
+    }
+
+    function updateRecordIdDisplay() {
+        if (previewRecordId) {
+            previewRecordId.textContent = generateUniqueRecordId();
+        }
+    }
+
+    // Hàm tự động cập nhật đơn giá khoán khóa cứng và tính tiền khoán ước tính
+    function updateWageCalculations() {
+        const prod = productSelect ? productSelect.value : '';
+        const op = operationSelect ? operationSelect.value : '';
+        const qtyDat = parseInt(qtyDatInput ? qtyDatInput.value : 0) || 0;
+        const qtyXuLy = parseInt(qtyXuLyInput ? qtyXuLyInput.value : 0) || 0;
+        const qtyHuy = parseInt(qtyHuyInput ? qtyHuyInput.value : 0) || 0;
+        const respVal = errorResponsibilitySelect ? errorResponsibilitySelect.value : 'Không có lỗi';
+
+        let unitWage = 35000;
+        if (prod && op) {
+            const canonicalP = window.getCanonicalProductKey ? window.getCanonicalProductKey(prod) : prod;
+            const key = `${canonicalP}___${op}`;
+            const keyRaw = `${prod}___${op}`;
+            if (window.AppData && window.AppData.operationWages) {
+                if (window.AppData.operationWages[key]) unitWage = window.AppData.operationWages[key];
+                else if (window.AppData.operationWages[keyRaw]) unitWage = window.AppData.operationWages[keyRaw];
+                else {
+                    for (let k in window.AppData.operationWages) {
+                        const parts = k.split('___');
+                        if (prod.toLowerCase().includes(parts[0].toLowerCase()) && op.toLowerCase().includes(parts[1].toLowerCase())) {
+                            unitWage = window.AppData.operationWages[k];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (lockedUnitWageInput) {
+            lockedUnitWageInput.value = unitWage.toLocaleString('vi-VN') + ' đ/CT';
+        }
+
+        // Hiện hộp thoại chọn trách nhiệm lỗi khi có hàng sửa hoặc hủy
+        if (errorResponsibilityBox) {
+            if (qtyXuLy > 0 || qtyHuy > 0) {
+                errorResponsibilityBox.style.display = 'block';
+            } else {
+                errorResponsibilityBox.style.display = 'none';
+                if (errorResponsibilitySelect) errorResponsibilitySelect.value = 'Không có lỗi';
+            }
+        }
+
+        // Quy tắc lương khoán: Lỗi thợ = 0%, Lỗi phôi đúc = 100% lương
+        let eligibleQty = qtyDat;
+        if (respVal.includes('Lỗi do thợ')) {
+            eligibleQty = qtyDat; // Không tính cho phần lỗi thợ
+        } else if (respVal.includes('Lỗi do phôi đúc')) {
+            eligibleQty = qtyDat + qtyXuLy + qtyHuy; // Công nhân vẫn hưởng khoán gia công
+        }
+
+        const estWage = eligibleQty * unitWage;
+        if (estimatedWageInput) {
+            estimatedWageInput.value = estWage.toLocaleString('vi-VN') + ' đ';
+        }
+
+        updateRecordIdDisplay();
+        return { unitWage, estWage };
+    }
+
+    // Hàm nạp danh sách PO khớp theo Khách hàng và Sản phẩm
+    function populatePOsForProduct() {
+        if (!poSelect) return;
+        const cust = customerSelect ? customerSelect.value : '';
+        const prod = productSelect ? productSelect.value : '';
+
+        poSelect.innerHTML = '<option value="">-- Chọn Mã Lệnh SX / PO --</option>';
+        if (poBadge) poBadge.style.display = 'none';
+
+        const allOrders = (window.AppData && window.AppData.orders) ? window.AppData.orders : [];
+        const matchedOrders = allOrders.filter(o => {
+            const matchCust = !cust || (o.customer && (o.customer.toLowerCase().includes(cust.toLowerCase()) || cust.toLowerCase().includes(o.customer.toLowerCase())));
+            const matchProd = !prod || (o.product && (o.product.toLowerCase().includes(prod.toLowerCase()) || prod.toLowerCase().includes(o.product.toLowerCase())));
+            return matchCust && matchProd;
+        });
+
+        const ordersToDisplay = (matchedOrders.length > 0) ? matchedOrders : (cust ? allOrders.filter(o => o.customer && o.customer.toLowerCase().includes(cust.toLowerCase())) : allOrders);
+
+        ordersToDisplay.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o.po;
+            opt.textContent = `${o.po} - ${o.product || ''} (KH: ${o.qty || 0} CT)`;
+            opt.setAttribute('data-qty', o.qty || 0);
+            poSelect.appendChild(opt);
+        });
+
+        if (ordersToDisplay.length > 0) {
+            poSelect.selectedIndex = 1;
+            if (poBadge && poPlanCount) {
+                poBadge.style.display = 'inline-block';
+                poPlanCount.textContent = (ordersToDisplay[0].qty || 0) + ' CT';
+            }
+        }
+        updateRecordIdDisplay();
+    }
+
+    if (poSelect) {
+        poSelect.addEventListener('change', () => {
+            const selectedOpt = poSelect.options[poSelect.selectedIndex];
+            if (selectedOpt && selectedOpt.value) {
+                const q = selectedOpt.getAttribute('data-qty') || 0;
+                if (poBadge && poPlanCount) {
+                    poBadge.style.display = 'inline-block';
+                    poPlanCount.textContent = q + ' CT';
+                }
+            } else {
+                if (poBadge) poBadge.style.display = 'none';
+            }
+            updateRecordIdDisplay();
+        });
+    }
+
+    if (errorResponsibilitySelect) {
+        errorResponsibilitySelect.addEventListener('change', updateWageCalculations);
+    }
+
     btnSubmitLog.addEventListener('click', () => {
         if (!currentUser) {
             showToast('⚠️ Vui lòng đăng nhập trước khi báo sản lượng!', 'danger');
@@ -1086,13 +1242,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (downtimeReasonVal) combinedNote += ` [${downtimeReasonVal}]`;
         if (rawNote) combinedNote += ` ${rawNote}`;
 
+        const selectedPO = (poSelect && poSelect.value) ? poSelect.value : 'PO-2026-001';
+        const recordId = generateUniqueRecordId();
+
+        // 🛑 CHẶN GỬI TRÙNG BẢN GHI (IDEMPOTENCY)
+        if (submittedRecordIds.has(recordId)) {
+            showToast(`⚠️ Bản ghi [${recordId}] đã được gửi thành công trước đó, vui lòng không gửi trùng!`, 'danger');
+            return;
+        }
+
+        const wageInfo = updateWageCalculations();
+        unitWage = wageInfo.unitWage;
+        const totalPieceWage = wageInfo.estWage;
+        const respVal = errorResponsibilitySelect ? errorResponsibilitySelect.value : 'Không có lỗi';
+
         const newLog = {
             id: Date.now(),
+            record_id: recordId,
             worker: currentUser.name,
             worker_id: currentUser.id,
             customer: customer,
             product: product,
-            po: 'PO-' + Math.floor(1000 + Math.random() * 9000),
+            po: selectedPO,
             date: reportDate,
             shift: shiftVal,
             start_time: startTimeVal,
@@ -1102,6 +1273,7 @@ document.addEventListener('DOMContentLoaded', () => {
             qty_dat: qtyDat,
             qty_xuly: qtyXuLy,
             qty_huy: qtyHuy,
+            responsibility: respVal,
             piece_wage_rate: unitWage,
             total_wage: totalPieceWage,
             xuly_note: xuLyNoteInput.value,
@@ -1114,6 +1286,10 @@ document.addEventListener('DOMContentLoaded', () => {
             downtime_min: downtimeMin,
             downtime_note: combinedNote
         };
+
+        // Ghi nhận mã bản ghi vào danh sách đã gửi để chặn trùng
+        submittedRecordIds.add(recordId);
+        localStorage.setItem('GCCK_SUBMITTED_RECORD_IDS', JSON.stringify(Array.from(submittedRecordIds)));
 
         // Google Sheets Integration URL Sync (Hardcoded URL cố định cho mọi thiết bị)
         const googleScriptUrl = localStorage.getItem('GOOGLE_SCRIPT_URL') 
@@ -1152,6 +1328,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset toàn bộ Form về trạng thái ban đầu sẵn sàng nhập mới
         resetReportForm();
     });
+
+    ['qtyDatInput', 'qtyXuLyInput', 'qtyHuyInput'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', updateWageCalculations);
+            el.addEventListener('change', updateWageCalculations);
+        }
+    });
+
 
     // Hàm Reset Form báo cáo sản lượng
     function resetReportForm() {

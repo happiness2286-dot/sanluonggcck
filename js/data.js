@@ -4839,304 +4839,370 @@ window.INITIAL_DATA = {
 ],
     orders: [
     {
-        "product": "492537-1",
+        "po": "PO-2026-001",
+        "customer": "Win-Win",
+        "product": "Trục Khuỷu Động Cơ Φ250",
+        "qty": 1000
+    },
+    {
+        "po": "PO-2026-002",
         "customer": "UCC",
-        "po": "UCC-20260819-34472",
+        "product": "Khuôn gá xích POWER",
+        "qty": 200
+    },
+    {
+        "po": "PO-2026-003",
+        "customer": "Vico- QLTB",
+        "product": "Mẫu Thử CR & hàng #",
+        "qty": 500
+    },
+    {
+        "po": "PO-1602",
+        "customer": "Hà Song Hải - XM Hạ Long",
+        "product": "Thanh đập đá vôi (2240x510x145)",
         "qty": 1
     },
     {
-        "product": "493623-1",
-        "customer": "UCC",
-        "po": "UCC-20260819-73619",
+        "po": "PO-3429",
+        "customer": "Hà Song Hải - XM Hạ Long",
+        "product": "Thanh đập đá vôi (2240x510x145)",
         "qty": 1
     },
     {
-        "product": "496025-1",
-        "customer": "UCC",
-        "po": "UCC-20260819-45742",
+        "po": "PO-5670",
+        "customer": "Hà Song Hải - XM Hạ Long",
+        "product": "Thanh đập đá vôi (2240x510x145)",
         "qty": 1
     },
     {
-        "product": "16335 Body-8'', JP",
-        "customer": "UCC",
-        "po": "UCC-20260819-68288",
+        "po": "PO-6829",
+        "customer": "Hà Song Hải - XM Hạ Long",
+        "product": "Thanh đập đá vôi (2240x510x145)",
+        "qty": 1
+    },
+    {
+        "po": "PO-7044",
+        "customer": "Hà Song Hải - XM Hạ Long",
+        "product": "Thanh đập đá vôi (2240x510x145)",
+        "qty": 1
+    },
+    {
+        "po": "PO-7189",
+        "customer": "Hà Song Hải - XM Hạ Long",
+        "product": "Thanh đập đá vôi (2240x510x145)",
+        "qty": 1
+    },
+    {
+        "po": "PO-7365",
+        "customer": "Hà Song Hải - XM Hạ Long",
+        "product": "Thanh đập đá vôi (2240x510x145)",
+        "qty": 1
+    },
+    {
+        "po": "PO-1279",
+        "customer": "Hải- Vinh Quảng Ninh",
+        "product": "Bộ rulo máy nghiền sơ cấp: Thân rồ to (φ820x890)",
+        "qty": 15
+    },
+    {
+        "po": "PO-2504",
+        "customer": "Hải- Vinh Quảng Ninh",
+        "product": "Bộ rulo máy nghiền sơ cấp: Thân rồ to (φ820x890)",
         "qty": 2
     },
     {
-        "product": "210600-1",
-        "customer": "UCC",
-        "po": "UCC-20260819-88425",
+        "po": "PO-4603",
+        "customer": "Hải- Vinh Quảng Ninh",
+        "product": "Bộ rulo máy nghiền sơ cấp: Thân rồ to (φ820x890)",
+        "qty": 1
+    },
+    {
+        "po": "PO-5612",
+        "customer": "Hải- Vinh Quảng Ninh",
+        "product": "Bộ rulo máy nghiền sơ cấp: Bích rulo (φ500x110) 1T",
+        "qty": 1
+    },
+    {
+        "po": "PO-7487",
+        "customer": "Hải- Vinh Quảng Ninh",
+        "product": "Bộ rulo máy nghiền sơ cấp: Thân rồ to (φ820x890)",
+        "qty": 3
+    },
+    {
+        "po": "PO-8134",
+        "customer": "Hải- Vinh Quảng Ninh",
+        "product": "Bộ rulo máy nghiền sơ cấp: Thân rồ to (φ820x890)",
+        "qty": 15
+    },
+    {
+        "po": "PO-1537",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 1
+    },
+    {
+        "po": "PO-2080",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
         "qty": 2
     },
     {
-        "product": "210766",
-        "customer": "UCC",
-        "po": "UCC-20260819-96826",
+        "po": "PO-2227",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 1
+    },
+    {
+        "po": "PO-2285",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 1
+    },
+    {
+        "po": "PO-3079",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 40
+    },
+    {
+        "po": "PO-3081",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 1
+    },
+    {
+        "po": "PO-3455",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 1
+    },
+    {
+        "po": "PO-3528",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 1
+    },
+    {
+        "po": "PO-4481",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 1
+    },
+    {
+        "po": "PO-4525",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 15
+    },
+    {
+        "po": "PO-4545",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
         "qty": 2
     },
     {
-        "product": "210767",
-        "customer": "UCC",
-        "po": "UCC-20260819-44418",
+        "po": "PO-5710",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 1
+    },
+    {
+        "po": "PO-6183",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 1
+    },
+    {
+        "po": "PO-7253",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 17
+    },
+    {
+        "po": "PO-7319",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
         "qty": 2
     },
     {
-        "product": "210768",
-        "customer": "UCC",
-        "po": "UCC-20260819-85816",
-        "qty": 2
+        "po": "PO-7432",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 8
     },
     {
-        "product": "493749-1 (Cap- end 30mm Chain)",
-        "customer": "UCC",
-        "po": "UCC-20260819-98173",
+        "po": "PO-9119",
+        "customer": "Luợng- KS Tường Long",
+        "product": "Ốp dao nhào trên (Bộ bên trái)",
+        "qty": 1
+    },
+    {
+        "po": "PO-2891",
+        "customer": "Molycop",
+        "product": "Bi 25",
         "qty": 10
     },
     {
-        "product": "4-210658-1",
-        "customer": "UCC",
-        "po": "UCC-20260819-37354",
-        "qty": 2
-    },
-    {
-        "product": "4-210658-2",
-        "customer": "UCC",
-        "po": "UCC-20260819-36951",
-        "qty": 2
-    },
-    {
-        "product": "496025",
-        "customer": "UCC",
-        "po": "UCC-20260819-84470",
-        "qty": 1
-    },
-    {
-        "product": "Quả búa cấy HK (gắn 40 que các bít 16x50/ 1 quả)",
-        "customer": "Z27",
-        "po": "Z27-20260819-70775",
-        "qty": 20
-    },
-    {
-        "product": "TL đe M máy búa 131 (505x477x103)",
-        "customer": "Xm Hải Phòng",
-        "po": "Xm Hải Phòng -20260819-50549",
-        "qty": 3
-    },
-    {
-        "product": "TL đe N máy búa 131 (505x477x103)",
-        "customer": "Xm Hải Phòng",
-        "po": "Xm Hải Phòng -20260819-33967",
-        "qty": 3
-    },
-    {
-        "product": "TL đe F máy búa 131 (535x477x103)",
-        "customer": "Xm Hải Phòng",
-        "po": "Xm Hải Phòng -20260819-63915",
-        "qty": 12
-    },
-    {
-        "product": "Ống bạc chặn D174x428",
-        "customer": "Hải- Vinh Quảng Ninh",
-        "po": "Hải- Vinh Quảng Ninh-20260819-86496",
-        "qty": 3
-    },
-    {
-        "product": "Fukku (N1000KN) 013-20590A (Bù bảo hành)",
-        "customer": "Kachimizu",
-        "po": "Kachimizu-20260819-31055",
-        "qty": 1
-    },
-    {
-        "product": "Fukku (N600KN) 013-20801A",
-        "customer": "Kachimizu",
-        "po": "Kachimizu-20260819-54057",
-        "qty": 8
-    },
-    {
-        "product": "Slip lever boss (N600KN) 013-20808-1",
-        "customer": "Kachimizu",
-        "po": "Kachimizu-20260819-72438",
-        "qty": 8
-    },
-    {
-        "product": "Block L (N600KN) 013-20819L",
-        "customer": "Kachimizu",
-        "po": "Kachimizu-20260819-87735",
-        "qty": 4
-    },
-    {
-        "product": "Block L (N600KN) 013-20819R",
-        "customer": "Kachimizu",
-        "po": "Kachimizu-20260819-89614",
-        "qty": 4
-    },
-    {
-        "product": "Block L (N600KN) 013-20768L",
-        "customer": "Kachimizu",
-        "po": "Kachimizu-20260819-63244",
-        "qty": 4
-    },
-    {
-        "product": "Block L (N600KN) 013-20768R",
-        "customer": "Kachimizu",
-        "po": "Kachimizu-20260819-22910",
-        "qty": 4
-    },
-    {
-        "product": "Đĩa búa 750 búa 2.2x2 mét (Đĩa 2 bên moay ơ 265/195 dày 126)",
-        "customer": "XM Đại Phú",
-        "po": "XM Đại Phú-20260819-26431",
-        "qty": 26
-    },
-    {
-        "product": "Đĩa búa 750 búa 2.2x2 mét (Đĩa 1 bên moay ơ 265/195 dày 98)",
-        "customer": "XM Đại Phú",
-        "po": "XM Đại Phú-20260819-97041",
-        "qty": 4
-    },
-    {
-        "product": "Đĩa búa 2000x2000 D750- DP (Đĩa 2 bên moay ơ 260/185 dày 124)",
-        "customer": "XM Đại Phú",
-        "po": "XM Đại Phú-20260819-78496",
-        "qty": 26
-    },
-    {
-        "product": "Đĩa búa 2000x2000 D750- DP (Đĩa 1 bên moay ơ 260/185 dày 93)",
-        "customer": "XM Đại Phú",
-        "po": "XM Đại Phú-20260819-86429",
-        "qty": 4
-    },
-    {
-        "product": "Đĩa búa 2000x2200 (Đĩa 2 bên Φ750 moay ơ 265/195 dày 124)",
-        "customer": "XM Đại Phú",
-        "po": "XM Đại Phú-20260819-70251",
+        "po": "PO-4099",
+        "customer": "Molycop",
+        "product": "Bi 40",
         "qty": 30
     },
     {
-        "product": "Đĩa búa 2000x2200 (Đĩa 1 bên Φ750 moay ơ 265/195 dày 88)",
-        "customer": "XM Đại Phú",
-        "po": "XM Đại Phú-20260819-29972",
-        "qty": 4
-    },
-    {
-        "product": "Búa đập- HC-G-2017",
-        "customer": "Taniguchi",
-        "po": "Taniguchi-20260819-67105",
-        "qty": 240
-    },
-    {
-        "product": "Búa đập- HC-G-2015",
-        "customer": "Taniguchi",
-        "po": "Taniguchi-20260819-49967",
-        "qty": 42
-    },
-    {
-        "product": "Tấm đỡ gạch cửa ra số 1 (Gia công rãnh)",
-        "customer": "Taniguchi",
-        "po": "Taniguchi-20260819-52485",
-        "qty": 1
-    },
-    {
-        "product": "Tấm đỡ gạch cửa ra số 2",
-        "customer": "Taniguchi",
-        "po": "Taniguchi-20260819-96657",
-        "qty": 23
-    },
-    {
-        "product": "Tấm đỡ gạch cửa ra số 2 (Gia công ốc M42)",
-        "customer": "Taniguchi",
-        "po": "Taniguchi-20260819-42999",
-        "qty": 1
-    },
-    {
-        "product": "Tấm đỡ gạch cửa ra số 3",
-        "customer": "Taniguchi",
-        "po": "Taniguchi-20260819-72591",
-        "qty": 24
-    },
-    {
-        "product": "Búa đập loại máy nghiền đứng VHC-15 theo bv: VHC-102387",
-        "customer": "Taniguchi",
-        "po": "Taniguchi-20260819-35092",
-        "qty": 1
-    },
-    {
-        "product": "Búa đập loại máy nghiền đứng VHC-111 theo bv: VHC-20102",
-        "customer": "Taniguchi",
-        "po": "Taniguchi-20260819-48565",
-        "qty": 1
-    },
-    {
-        "product": "Taytona Drawing No 2CG00382",
-        "customer": "TFG",
-        "po": "TFG-20260819-36465",
-        "qty": 1
-    },
-    {
-        "product": "Pattern Drawing No 2CG00382",
-        "customer": "TFG",
-        "po": "TFG-20260819-19995",
-        "qty": 1
-    },
-    {
-        "product": "Taytona Drawing No 2CG00820",
-        "customer": "TFG",
-        "po": "TFG-20260819-36219",
-        "qty": 1
-    },
-    {
-        "product": "Pattern Drawing No 2CG00820",
-        "customer": "TFG",
-        "po": "TFG-20260819-72029",
-        "qty": 1
-    },
-    {
-        "product": "Bánh mài theo bản vẽ UPHT-SJ040195-01",
-        "customer": "UP Hà Tĩnh",
-        "po": "UP Hà Tĩnh-20260819-89562",
+        "po": "PO-4474",
+        "customer": "Molycop",
+        "product": "Bi 25",
         "qty": 3
     },
     {
-        "product": "Đĩa mài vành trong theo bv UPHT-SJ040193-01",
-        "customer": "UP Hà Tĩnh",
-        "po": "UP Hà Tĩnh-20260819-18632",
+        "po": "PO-5163",
+        "customer": "Molycop",
+        "product": "Bi 40",
+        "qty": 19
+    },
+    {
+        "po": "PO-5200",
+        "customer": "Molycop",
+        "product": "Bi 25",
+        "qty": 19
+    },
+    {
+        "po": "PO-7435",
+        "customer": "Molycop",
+        "product": "Bi 90",
+        "qty": 3
+    },
+    {
+        "po": "PO-8205",
+        "customer": "Molycop",
+        "product": "Bi 40",
+        "qty": 7
+    },
+    {
+        "po": "PO-8823",
+        "customer": "Molycop",
+        "product": "Bi 40",
+        "qty": 21
+    },
+    {
+        "po": "PO-9933",
+        "customer": "Molycop",
+        "product": "Bi 40",
+        "qty": 5
+    },
+    {
+        "po": "PO-1243",
+        "customer": "TFG",
+        "product": "Taytona Drawing No 2CG00820",
+        "qty": 1
+    },
+    {
+        "po": "PO-1400",
+        "customer": "TFG",
+        "product": "Taytona Drawing No 2CG00820",
+        "qty": 1
+    },
+    {
+        "po": "PO-1877",
+        "customer": "TFG",
+        "product": "Pattern Drawing No 2CG00820",
+        "qty": 1
+    },
+    {
+        "po": "PO-3223",
+        "customer": "TFG",
+        "product": "Nut cover số hiệu F3P00064-2 theo bản vẽ 2CG01074",
+        "qty": 1
+    },
+    {
+        "po": "PO-8916",
+        "customer": "TFG",
+        "product": "Pattern Drawing No 2CG00820",
+        "qty": 1
+    },
+    {
+        "po": "PO-9407",
+        "customer": "TFG",
+        "product": "Nut cover số hiệu E4P08508 theo bản vẽ 2CG00744",
+        "qty": 1
+    },
+    {
+        "po": "PO-1050",
+        "customer": "Thyssen",
+        "product": "Sealing trip, below",
+        "qty": 6
+    },
+    {
+        "po": "PO-1091",
+        "customer": "Thyssen",
+        "product": "Sealing strip, above",
+        "qty": 9
+    },
+    {
+        "po": "PO-1099",
+        "customer": "Thyssen",
+        "product": "Sealing strip, above",
+        "qty": 15
+    },
+    {
+        "po": "PO-1112",
+        "customer": "Thyssen",
+        "product": "Sealing strip, below",
+        "qty": 14
+    },
+    {
+        "po": "PO-1168",
+        "customer": "Thyssen",
+        "product": "Sealing strip, above",
+        "qty": 8
+    },
+    {
+        "po": "PO-1193",
+        "customer": "Thyssen",
+        "product": "Sealing trip, below",
         "qty": 13
     },
     {
-        "product": "Xích cho 463.CV030",
-        "customer": "Hùng HD- XM Hoàng Thạch",
-        "po": "Hùng HD- XM Hoàng Thạch-20260819-82958",
-        "qty": 170
+        "po": "PO-1415",
+        "customer": "Thyssen",
+        "product": "Sealing strip, above",
+        "qty": 2
     },
     {
-        "product": "Bi 15",
-        "customer": "Molycop",
-        "po": "Molycop-20260819-76423",
-        "qty": 500
+        "po": "PO-1464",
+        "customer": "Thyssen",
+        "product": "Sealing trip, below",
+        "qty": 29
     },
     {
-        "product": "Bi 17",
-        "customer": "Molycop",
-        "po": "Molycop-20260819-48090",
-        "qty": 500
+        "po": "PO-1494",
+        "customer": "Thyssen",
+        "product": "Sealing trip, below",
+        "qty": 8
     },
     {
-        "product": "Bi 20",
-        "customer": "Molycop",
-        "po": "Molycop-20260819-70514",
-        "qty": 500
+        "po": "PO-1502",
+        "customer": "Thyssen",
+        "product": "Sealing trip, below",
+        "qty": 5
     },
     {
-        "product": "Bi 25",
-        "customer": "Molycop",
-        "po": "Molycop-20260819-69045",
-        "qty": 500
+        "po": "PO-1545",
+        "customer": "Thyssen",
+        "product": "Sealing strip, below",
+        "qty": 26
     },
     {
-        "product": "Bi 30",
-        "customer": "Molycop",
-        "po": "Molycop-20260819-94190",
-        "qty": 500
+        "po": "PO-1592",
+        "customer": "Thyssen",
+        "product": "Sealing strip, below",
+        "qty": 16
+    },
+    {
+        "po": "PO-1695",
+        "customer": "Thyssen",
+        "product": "Sealing trip, below",
+        "qty": 10
     }
 ],
     historyLogs: [
