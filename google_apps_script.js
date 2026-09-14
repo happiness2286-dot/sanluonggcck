@@ -4696,7 +4696,7 @@ function baiThuKiemTraNghiemThu10Diem() {
     "   • Bước 5 (Lỗi do thợ):         Đủ ĐK=" + formatVND(b5_du) + " | Không hưởng lỗi thợ=" + formatVND(b5_loitho) + " | Thực lĩnh=" + formatVND(b5_thuc) + " (0% lương) [ĐẠT]",
     "",
     "2. ĐỐI SOÁT DASHBOARD - BẢNG PO:",
-    "   • Ô kiểm tra D19: So trực tiếp với bảng PO =IF(AND(D18=COUNTA(...), E18=SUM(...)...), "KHỚP 100% VỚI BẢNG PO", ...)",
+    "   • Ô kiểm tra D19: So trực tiếp với bảng PO =IF(AND(D18=COUNTA(...), E18=SUM(...)...), 'KHỚP 100% VỚI BẢNG PO', ...)",
     "   • Chênh lệch = 0 (Khớp hoàn hảo 61 PO, 2.124 KH, 44.75 BTP, 918 giao, 29.5 WIP)",
     "",
     "3. BỘ CHỌN THÁNG & NGÀY TỰ ĐỘNG:",
