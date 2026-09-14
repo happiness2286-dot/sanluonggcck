@@ -550,6 +550,7 @@ function onOpen() {
     .addSeparator()
     .addItem("🧹 XÓA 17 SHEET MÁY LẺ CŨ (CHO GỌN BẢNG TÍNH)", "deleteOld17MachineSheets")
     .addItem("⏰ Cài Đặt Bộ Hẹn Giờ Cảnh Báo 3 Ca (14h15, 22h15, 06h15)", "setupShiftTriggers")
+    .addItem("⚡ BẬT TỰ ĐỘNG ĐỒNG BỘ MỌI BÁO CÁO (AUTO-SYNC TRIGGERS)", "setupCalculationTriggers")
     .addToUi();
 }
 
@@ -2445,8 +2446,8 @@ function applyLiveFormulasToAllSheets() {
       // Cột O: CHỈ SỐ OEE (%) = A * Q * P
       oeeSheet.getRange(m, 15).setFormula('=I' + m + '*L' + m + '*N' + m + '');
       
-      // Cột P: Xếp Hạng Đánh Giá OEE
-      oeeSheet.getRange(m, 16).setFormula('=IF(O' + m + '>=0.85, "ĐẲNG CẤP THẾ GIỚI (>=85%)", IF(O' + m + '>=0.7, "VẬN HÀNH TỐT (70-84%)", IF(O' + m + '>=0.55, "TRUNG BÌNH (55-69%)", "CẢNH BÁO NGHẼN/KÉM (<55%)")))');
+      // Cột P: Xếp Hạng Đánh Giá OEE & CẢNH BÁO HIỆU SUẤT THÔ VƯỢT 100%
+      oeeSheet.getRange(m, 16).setFormula('=IF(H' + m + '>0, IF(M' + m + '/H' + m + '>1.05, "⚠️ VƯỢT ĐỊNH MỨC (P_thô " & TEXT(M' + m + '/H' + m + ', "0%") & ")", IF(O' + m + '>=0.85, "ĐẲNG CẤP THẾ GIỚI (>=85%)", IF(O' + m + '>=0.7, "VẬN HÀNH TỐT (70-84%)", IF(O' + m + '>=0.55, "TRUNG BÌNH (55-69%)", "CẢNH BÁO NGHẼN/KÉM (<55%)")))), "CHƯA VẬN HÀNH")');
     }
     
     // Dòng 21: TỔNG HỢP TOÀN NHÀ MÁY (17 MÁY)
@@ -2463,7 +2464,7 @@ function applyLiveFormulasToAllSheets() {
     oeeSheet.getRange(21, 14).setFormula('=IF(H21>0, MIN(1.0, M21/H21), 0.85)');
     // Chỉ số OEE toàn xưởng (Cột O) - Tuyệt đối không vượt quá 100%
     oeeSheet.getRange(21, 15).setFormula('=MIN(1.0, I21*L21*N21)');
-    oeeSheet.getRange(21, 16).setFormula('=IF(O21>=0.85, "ĐẲNG CẤP THẾ GIỚI", IF(O21>=0.7, "VẬN HÀNH TỐT", "CẦN CẢI TIẾN"))');
+    oeeSheet.getRange(21, 16).setFormula('=IF(H21>0, IF(M21/H21>1.05, "⚠️ VƯỢT ĐỊNH MỨC (P_thô toàn xưởng " & TEXT(M21/H21, "0%") & ")", IF(O21>=0.85, "ĐẲNG CẤP THẾ GIỚI", IF(O21>=0.7, "VẬN HÀNH TỐT", "CẦN CẢI TIẾN"))), "CHƯA VẬN HÀNH")');
   }
 
   // 4. CÔNG THỨC SỐNG CHO SHEET '03_Can_Bang_Tai_17_May'
@@ -2489,14 +2490,29 @@ function applyLiveFormulasToAllSheets() {
     dashSheet.getRange("L5").setNumberFormat("0.0%");
 
     for (var c = 9; c <= 17; c++) {
-      dashSheet.getRange(c, 4).setFormula('=COUNTIF(\'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*")');
-      dashSheet.getRange(c, 5).setFormula('=SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$E$4:$E$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*")');
-      dashSheet.getRange(c, 6).setFormula('=SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$F$4:$F$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*")');
-      dashSheet.getRange(c, 7).setFormula('=SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$G$4:$G$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*")');
+      // Số PO: Tra cứu theo Mã KH (Cột B) hoặc Tên KH (Cột C)
+      dashSheet.getRange(c, 4).setFormula('=IFERROR(COUNTIF(\'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*") + COUNTIF(\'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & C' + c + ' & "*"), 0)');
+      
+      // Tổng SL Đặt
+      dashSheet.getRange(c, 5).setFormula('=IFERROR(SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$E$4:$E$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*") + SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$E$4:$E$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & C' + c + ' & "*"), 0)');
+      
+      // BTP Xong Tại Xưởng
+      dashSheet.getRange(c, 6).setFormula('=IFERROR(SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$F$4:$F$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*") + SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$F$4:$F$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & C' + c + ' & "*"), 0)');
+      
+      // Đã Bàn Giao Đi
+      dashSheet.getRange(c, 7).setFormula('=IFERROR(SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$G$4:$G$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & B' + c + ' & "*") + SUMIFS(\'06_Ke_Hoach_Tien_Do_PO\'!$G$4:$G$500, \'06_Ke_Hoach_Tien_Do_PO\'!$C$4:$C$500, "*" & C' + c + ' & "*"), 0)');
+      
+      // Tồn Chờ Bàn Giao (WIP)
       dashSheet.getRange(c, 8).setFormula('=MAX(0, F' + c + '-G' + c + ')');
+      
+      // Còn Nợ Kế Hoạch
       dashSheet.getRange(c, 9).setFormula('=MAX(0, E' + c + '-G' + c + ')');
+      
+      // Tiến Độ Bàn Giao (%): Khi E=0 tuyệt đối bằng 0%, không bao giờ hiển thị 100%!
       dashSheet.getRange(c, 10).setFormula('=IF(E' + c + '>0, G' + c + '/E' + c + ', 0)');
-      dashSheet.getRange(c, 11).setFormula('=IF(J' + c + '>=1, "Hoàn thành 100%", IF(F' + c + '>=E' + c + ', "Đã xong - Chờ giao", IF(F' + c + '>0, "Đang gia công", "Chờ phôi đúc")))');
+      
+      // Trạng Thái Điều Độ: Khi E=0 báo "Chưa có đơn hàng", không bao giờ báo "Hoàn thành 100%"
+      dashSheet.getRange(c, 11).setFormula('=IF(E' + c + '=0, "Chưa có đơn hàng", IF(G' + c + '>E' + c + ', "⚠️ BÀN GIAO VƯỢT KH", IF(G' + c + '>=E' + c + ', "Đã bàn giao đủ 100%", IF(F' + c + '>=E' + c + ', "Xong xưởng - Chờ chuyển", IF(F' + c + '>0, "Đang gia công trên máy", "Chờ nhận phôi đúc")))))');
     }
     dashSheet.getRange(18, 4).setFormula('=SUM(D9:D17)');
     dashSheet.getRange(18, 5).setFormula('=SUM(E9:E17)');
@@ -2968,10 +2984,20 @@ function calculateAndPopulateAllSheets() {
 
       var OEE = A * P * Q;
 
+      var rawP = runMin > 0 ? (sumStd / runMin) : 0.85;
+      var P = Math.min(1.0, rawP);
+      var OEE = Math.min(1.0, A * P * Q);
+
       var rank = "CẢNH BÁO NGHẼN/KÉM (<55%)";
-      if (OEE >= 0.85) rank = "ĐẲNG CẤP THẾ GIỚI (>=85%)";
-      else if (OEE >= 0.70) rank = "VẬN HÀNH TỐT (70-84%)";
-      else if (OEE >= 0.55) rank = "TRUNG BÌNH (55-69%)";
+      if (rawP > 1.05) {
+        rank = "⚠️ VƯỢT ĐỊNH MỨC (P_thô " + Math.round(rawP * 100) + "%)";
+      } else if (OEE >= 0.85) {
+        rank = "ĐẲNG CẤP THẾ GIỚI (>=85%)";
+      } else if (OEE >= 0.70) {
+        rank = "VẬN HÀNH TỐT (70-84%)";
+      } else if (OEE >= 0.55) {
+        rank = "TRUNG BÌNH (55-69%)";
+      }
 
       sumE += actualShifts;
       sumF += planMin;
@@ -3000,7 +3026,17 @@ function calculateAndPopulateAllSheets() {
     var totalQ = sumJ > 0 ? Math.min(1.0, sumK / sumJ) : 1.0;
     var totalP = sumH > 0 ? Math.min(1.0, sumM / sumH) : 0.85;
     var totalOEE = Math.min(1.0, totalA * totalQ * totalP);
-    var totalRank = totalOEE >= 0.85 ? "ĐẲNG CẤP THẾ GIỚI" : (totalOEE >= 0.70 ? "VẬN HÀNH TỐT" : "CẦN CẢI TIẾN");
+    var totalRawP = sumH > 0 ? (sumM / sumH) : 0.85;
+    var totalRank = "VẬN HÀNH TỐT";
+    if (totalRawP > 1.05) {
+      totalRank = "⚠️ VƯỢT ĐỊNH MỨC (P_thô toàn xưởng " + Math.round(totalRawP * 100) + "%)";
+    } else if (totalOEE >= 0.85) {
+      totalRank = "ĐẲNG CẤP THẾ GIỚI";
+    } else if (totalOEE >= 0.70) {
+      totalRank = "VẬN HÀNH TỐT";
+    } else {
+      totalRank = "CẦN CẢI TIẾN";
+    }
 
     oeeSheet.getRange(21, 5).setValue(sumE);
     oeeSheet.getRange(21, 6).setValue(sumF);
@@ -3269,13 +3305,58 @@ function unlockWagePeriod() {
   return "✅ Đã mở khóa sổ thành công!";
 }
 
-// TỰ ĐỘNG TÍNH LẠI KHI CÓ BẤT KỲ THAY ĐỔI NÀO TRONG NHẬT KÝ HOẶC BẢNG LƯƠNG
+// ⚡ BỘ KÍCH HOẠT TỰ ĐỘNG CẬP NHẬT TOÀN BỘ BÁO CÁO, DASHBOARD, OEE & TIẾN ĐỘ PO
+function setupCalculationTriggers() {
+  var ss = getSpreadsheet();
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    var fn = triggers[i].getHandlerFunction();
+    if (fn === "calculateAndPopulateAllSheets" || fn === "autoRecalculateOnEdit") {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+
+  // 1. Kích hoạt tự động khi có thao tác chỉnh sửa (OnEdit)
+  try {
+    ScriptApp.newTrigger("autoRecalculateOnEdit")
+      .forSpreadsheet(ss)
+      .onEdit()
+      .create();
+  } catch (eTrig1) {
+    console.log(eTrig1);
+  }
+
+  // 2. Kích hoạt tự động định kỳ mỗi 15 phút (Đảm bảo số liệu luôn tươi mới)
+  try {
+    ScriptApp.newTrigger("calculateAndPopulateAllSheets")
+      .timeBased()
+      .everyMinutes(15)
+      .create();
+  } catch (eTrig2) {
+    console.log(eTrig2);
+  }
+
+  Logger.log("✅ ĐÃ BẬT TỰ ĐỘNG CẬP NHẬT TOÀN DIỆN CHO DASHBOARD, BẢNG LƯƠNG, OEE & TIẾN ĐỘ PO!");
+  return "✅ Đã bật tự động cập nhật mọi báo cáo theo thời gian thực!";
+}
+
+function autoRecalculateOnEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    var sName = e.range.getSheet().getName();
+    if (sName === "Nhật Ký Sản Lượng" || sName === "06_Ke_Hoach_Tien_Do_PO" || sName === "10_Bang_Luong_Khoan_Tho" || sName === "07_Quet_Ma_Nhat_Ky_Ca") {
+      calculateAndPopulateAllSheets();
+    }
+  } catch (err) {}
+}
+
+// TỰ ĐỘNG TÍNH LẠI KHI CÓ BẤT KỲ THAY ĐỔI NÀO TRONG NHẬT KÝ, PO HOẶC BẢNG LƯƠNG
 function onEdit(e) {
   try {
     if (!e || !e.range) return;
     var sh = e.range.getSheet();
     var sName = sh.getName();
-    if (sName === "10_Bang_Luong_Khoan_Tho" || sName === "Nhật Ký Sản Lượng" || sName === "07_Quet_Ma_Nhat_Ky_Ca") {
+    if (sName === "10_Bang_Luong_Khoan_Tho" || sName === "Nhật Ký Sản Lượng" || sName === "06_Ke_Hoach_Tien_Do_PO" || sName === "07_Quet_Ma_Nhat_Ky_Ca") {
       calculateAndPopulateAllSheets();
     }
   } catch (err) {}
