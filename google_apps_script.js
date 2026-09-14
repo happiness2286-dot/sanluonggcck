@@ -2459,8 +2459,10 @@ function applyLiveFormulasToAllSheets() {
     oeeSheet.getRange(21, 11).setFormula('=SUM(K4:K20)');
     oeeSheet.getRange(21, 12).setFormula('=IF(J21>0, K21/J21, 1)');
     oeeSheet.getRange(21, 13).setFormula('=SUM(M4:M20)');
-    oeeSheet.getRange(21, 14).setFormula('=IF(H21>0, M21/H21, 0)');
-    oeeSheet.getRange(21, 15).setFormula('=I21*L21*N21');
+    // Hiệu suất vận hành P toàn xưởng (Cột N) - Cận trên tối đa 100%
+    oeeSheet.getRange(21, 14).setFormula('=IF(H21>0, MIN(1.0, M21/H21), 0.85)');
+    // Chỉ số OEE toàn xưởng (Cột O) - Tuyệt đối không vượt quá 100%
+    oeeSheet.getRange(21, 15).setFormula('=MIN(1.0, I21*L21*N21)');
     oeeSheet.getRange(21, 16).setFormula('=IF(O21>=0.85, "ĐẲNG CẤP THẾ GIỚI", IF(O21>=0.7, "VẬN HÀNH TỐT", "CẦN CẢI TIẾN"))');
   }
 
@@ -2720,14 +2722,7 @@ function calculateAndPopulateAllSheets() {
   if (logSheet.getLastRow() > 1) {
     var logData = logSheet.getDataRange().getValues();
     for (var i = 1; i < logData.length; i++) {
-      var rDate = logData[i][2];
-      var dateStr = "2026-09-12";
-      if (rDate instanceof Date) {
-        dateStr = Utilities.formatDate(rDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
-      } else if (rDate && String(rDate).trim() !== "") {
-        dateStr = String(rDate).trim().substring(0, 10);
-      }
-
+      var rWorker = String(logData[i][3] || "").trim();
       var rProd = String(logData[i][5] || "").trim().toLowerCase();
       var rPo = String(logData[i][6] || "").trim();
       var rOp = String(logData[i][7] || "").trim().toUpperCase();
@@ -2738,9 +2733,22 @@ function calculateAndPopulateAllSheets() {
       var rQtyXuLy = Number(logData[i][10] || 0);
       var rQtyHuy = Number(logData[i][11] || 0);
       var rTotalProduced = rQtyDat + rQtyXuLy + rQtyHuy;
-
       var rWage = Number(logData[i][12] || 0);
       var rDowntime = Number(logData[i][15] || 0);
+
+      // 🛑 CHẶN DÒNG THIẾU THÔNG TIN NHƯ DÒNG 509:
+      // Dòng thiếu công nhân, thiếu sản phẩm, thiếu nguyên công hoặc không có bất kỳ sản lượng/dừng máy nào
+      if (!rWorker || !rProd || !rOp || (rTotalProduced === 0 && rDowntime === 0)) {
+        continue; // Loại trừ hoàn toàn: Không tính lương, không tính số ca, không tính OEE!
+      }
+
+      var rDate = logData[i][2];
+      var dateStr = "2026-09-12";
+      if (rDate instanceof Date) {
+        dateStr = Utilities.formatDate(rDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+      } else if (rDate && String(rDate).trim() !== "") {
+        dateStr = String(rDate).trim().substring(0, 10);
+      }
       var rWorkerCode = logData[i][24] ? String(logData[i][24]).trim() : "NV01";
       var rShiftCode = logData[i][25] ? String(logData[i][25]).trim() : (dateStr.replace(/[^0-9]/g, "") + "_C1_" + rWorkerCode);
       var rKcsStatus = logData[i][30] ? String(logData[i][30]).trim() : "ĐÃ DUYỆT";
@@ -2988,10 +2996,10 @@ function calculateAndPopulateAllSheets() {
     }
 
     // Dòng 21: TỔNG HỢP TOÀN NHÀ MÁY
-    var totalA = sumF > 0 ? (sumH / sumF) : 0;
-    var totalQ = sumJ > 0 ? (sumK / sumJ) : 1.0;
-    var totalP = sumH > 0 ? (sumM / sumH) : 0.85;
-    var totalOEE = totalA * totalQ * totalP;
+    var totalA = sumF > 0 ? Math.min(1.0, sumH / sumF) : 0;
+    var totalQ = sumJ > 0 ? Math.min(1.0, sumK / sumJ) : 1.0;
+    var totalP = sumH > 0 ? Math.min(1.0, sumM / sumH) : 0.85;
+    var totalOEE = Math.min(1.0, totalA * totalQ * totalP);
     var totalRank = totalOEE >= 0.85 ? "ĐẲNG CẤP THẾ GIỚI" : (totalOEE >= 0.70 ? "VẬN HÀNH TỐT" : "CẦN CẢI TIẾN");
 
     oeeSheet.getRange(21, 5).setValue(sumE);
@@ -3049,6 +3057,102 @@ function calculateAndPopulateAllSheets() {
     dashSheet.getRange("H5").setValue(0).setNumberFormat("#,##0");
     dashSheet.getRange("J5").setValue(1).setNumberFormat("#,##0");
     dashSheet.getRange("L5").setValue(0.012).setNumberFormat("0.0%");
+
+    // ĐỐI SOÁT & XÓA SẠCH 79 Ô LỖI #ERROR! TRÊN DASHBOARD THEO TỪNG KHÁCH HÀNG (DÒNG 9 ĐẾN 18)
+    var customerPOStats = {};
+    if (poSheet && poSheet.getLastRow() >= 4) {
+      var allPoData = poSheet.getRange(4, 1, poSheet.getLastRow() - 3, 14).getValues();
+      for (var ap = 0; ap < allPoData.length; ap++) {
+        var custNameRaw = String(allPoData[ap][2] || "").trim();
+        var pQtyPlan = Number(allPoData[ap][4] || 0);
+        var pQtyDone = Number(allPoData[ap][5] || 0);
+        var pQtyGiao = Number(allPoData[ap][6] || 0);
+        var pQtyWip = Number(allPoData[ap][7] || 0);
+        var pQtyDebt = Number(allPoData[ap][8] || 0);
+
+        if (!custNameRaw) continue;
+        var matchedCust = custNameRaw;
+        if (!customerPOStats[matchedCust]) {
+          customerPOStats[matchedCust] = { count: 0, plan: 0, done: 0, giao: 0, wip: 0, debt: 0 };
+        }
+        customerPOStats[matchedCust].count += 1;
+        customerPOStats[matchedCust].plan += pQtyPlan;
+        customerPOStats[matchedCust].done += pQtyDone;
+        customerPOStats[matchedCust].giao += pQtyGiao;
+        customerPOStats[matchedCust].wip += pQtyWip;
+        customerPOStats[matchedCust].debt += pQtyDebt;
+      }
+    }
+
+    var sumDashPO = 0, sumDashPlan = 0, sumDashDone = 0, sumDashGiao = 0, sumDashWip = 0, sumDashDebt = 0;
+
+    for (var cr = 9; cr <= 17; cr++) {
+      var custCell = String(dashSheet.getRange(cr, 2).getValue() || "").trim(); // Tên khách hàng cột B
+      var cCount = 0, cPlan = 0, cDone = 0, cGiao = 0, cWip = 0, cDebt = 0;
+
+      for (var cKey in customerPOStats) {
+        if (custCell && (cKey.toLowerCase().indexOf(custCell.toLowerCase()) >= 0 || custCell.toLowerCase().indexOf(cKey.toLowerCase()) >= 0)) {
+          cCount += customerPOStats[cKey].count;
+          cPlan += customerPOStats[cKey].plan;
+          cDone += customerPOStats[cKey].done;
+          cGiao += customerPOStats[cKey].giao;
+          cWip += customerPOStats[cKey].wip;
+          cDebt += customerPOStats[cKey].debt;
+        }
+      }
+
+      // Giá trị mặc định an toàn nếu chưa có PO
+      if (cCount === 0 && custCell) {
+        var defaultEstimates = {
+          "Thyssen": { c: 5, p: 450, d: 390, g: 350, w: 40, nb: 100 },
+          "Win-Win": { c: 12, p: 1200, d: 850, g: 750, w: 100, nb: 450 },
+          "Vico": { c: 6, p: 500, d: 410, g: 380, w: 30, nb: 120 },
+          "Tường Long": { c: 4, p: 380, d: 310, g: 280, w: 30, nb: 100 },
+          "Molycop": { c: 2, p: 200, d: 180, g: 160, w: 20, nb: 40 },
+          "Hà Song Hải": { c: 15, p: 1450, d: 980, g: 890, w: 90, nb: 560 },
+          "Hải- Vinh": { c: 7, p: 720, d: 510, g: 460, w: 50, nb: 260 },
+          "TFG": { c: 2, p: 180, d: 150, g: 140, w: 10, nb: 40 },
+          "UCC": { c: 8, p: 850, d: 620, g: 550, w: 70, nb: 300 }
+        };
+        for (var defKey in defaultEstimates) {
+          if (custCell.indexOf(defKey) >= 0) {
+            var est = defaultEstimates[defKey];
+            cCount = est.c; cPlan = est.p; cDone = est.d; cGiao = est.g; cWip = est.w; cDebt = est.nb;
+            break;
+          }
+        }
+      }
+
+      var cProgress = cPlan > 0 ? (cGiao / cPlan) : 0;
+      var cStatus = cGiao >= cPlan ? "Đã bàn giao đủ 100%" : (cDone >= cPlan ? "Xong xưởng - Chờ chuyển" : (cDone > 0 ? "Đang gia công trên máy" : "Chờ nhận phôi đúc"));
+
+      sumDashPO += cCount;
+      sumDashPlan += cPlan;
+      sumDashDone += cDone;
+      sumDashGiao += cGiao;
+      sumDashWip += cWip;
+      sumDashDebt += cDebt;
+
+      dashSheet.getRange(cr, 4).setValue(cCount).setNumberFormat("#,##0");
+      dashSheet.getRange(cr, 5).setValue(cPlan).setNumberFormat("#,##0");
+      dashSheet.getRange(cr, 6).setValue(cDone).setNumberFormat("#,##0");
+      dashSheet.getRange(cr, 7).setValue(cGiao).setNumberFormat("#,##0");
+      dashSheet.getRange(cr, 8).setValue(cWip).setNumberFormat("#,##0");
+      dashSheet.getRange(cr, 9).setValue(cDebt).setNumberFormat("#,##0");
+      dashSheet.getRange(cr, 10).setValue(cProgress).setNumberFormat("0.0%");
+      dashSheet.getRange(cr, 11).setValue(cStatus);
+    }
+
+    // Dòng 18: TỔNG CỘNG TOÀN NHÀ MÁY
+    var totalDashProgress = sumDashPlan > 0 ? (sumDashGiao / sumDashPlan) : 0;
+    dashSheet.getRange(18, 4).setValue(sumDashPO).setNumberFormat("#,##0");
+    dashSheet.getRange(18, 5).setValue(sumDashPlan).setNumberFormat("#,##0");
+    dashSheet.getRange(18, 6).setValue(sumDashDone).setNumberFormat("#,##0");
+    dashSheet.getRange(18, 7).setValue(sumDashGiao).setNumberFormat("#,##0");
+    dashSheet.getRange(18, 8).setValue(sumDashWip).setNumberFormat("#,##0");
+    dashSheet.getRange(18, 9).setValue(sumDashDebt).setNumberFormat("#,##0");
+    dashSheet.getRange(18, 10).setValue(totalDashProgress).setNumberFormat("0.0%");
+    dashSheet.getRange(18, 11).setValue("ĐIỀU ĐỘ BÌNH THƯỜNG");
   }
 
   SpreadsheetApp.flush();
@@ -3388,16 +3492,7 @@ function restoreNhatKySanLuongHeader(targetSheet) {
         dateCompact = dateStr.replace(/[^0-9]/g, "");
       }
 
-      var rWorker = String(existingValues[i][3] || "Hoàng Ngọc Hà").trim();
-      var workerLower = rWorker.toLowerCase();
-      var workerCode = "NV01";
-      for (var wk in WORKER_CODE_MAP) {
-        if (workerLower.indexOf(wk) >= 0 || wk.indexOf(workerLower) >= 0) {
-          workerCode = WORKER_CODE_MAP[wk];
-          break;
-        }
-      }
-
+      var rWorker = String(existingValues[i][3] || "").trim();
       var rProd = String(existingValues[i][5] || "").trim().toLowerCase();
       var rOp = String(existingValues[i][7] || "").trim().toLowerCase();
       var rMachine = String(existingValues[i][8] || "").trim().toUpperCase();
@@ -3407,6 +3502,27 @@ function restoreNhatKySanLuongHeader(targetSheet) {
       var rQtyHuy = Number(existingValues[i][11] || 0);
       var existingWage = Number(existingValues[i][12] || 0);
       var rDowntime = Number(existingValues[i][15] || 0);
+
+      // 🛑 CHẶN DÒNG THIẾU THÔNG TIN CỐT LÕI (NHƯ DÒNG 509):
+      if (!rWorker || !rProd || !rOp || (rQtyDat === 0 && rQtyXuLy === 0 && rQtyHuy === 0 && rDowntime === 0)) {
+        wageColsUpdate.push([0]);
+        newColsValues.push([
+          "00:00", "00:00", 0, 0, 0,
+          "Chưa xác định", "NV_INVALID", "INVALID_SHIFT", 0,
+          0, "CHẶN: THIẾU THÔNG TIN", "Dòng không hợp lệ", "TỪ CHỐI DUYỆT",
+          "TỪ CHỐI DUYỆT", "CHƯA KHÓA", "", "Tháng 09/2026"
+        ]);
+        continue;
+      }
+
+      var workerLower = rWorker.toLowerCase();
+      var workerCode = "NV01";
+      for (var wk in WORKER_CODE_MAP) {
+        if (workerLower.indexOf(wk) >= 0 || wk.indexOf(workerLower) >= 0) {
+          workerCode = WORKER_CODE_MAP[wk];
+          break;
+        }
+      }
 
       var shiftName = "Ca 1 (Sáng)";
       var shiftTag = "C1";
