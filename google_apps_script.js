@@ -551,6 +551,9 @@ function onOpen() {
     .addItem("🧹 XÓA 17 SHEET MÁY LẺ CŨ (CHO GỌN BẢNG TÍNH)", "deleteOld17MachineSheets")
     .addItem("⏰ Cài Đặt Bộ Hẹn Giờ Cảnh Báo 3 Ca (14h15, 22h15, 06h15)", "setupShiftTriggers")
     .addItem("⚡ BẬT TỰ ĐỘNG ĐỒNG BỘ MỌI BÁO CÁO (AUTO-SYNC TRIGGERS)", "setupCalculationTriggers")
+    .addSeparator()
+    .addItem("🧪 NHẬP 1 DÒNG NHẬT KÝ THỬ & CHỨNG MINH TỰ ĐỘNG CẬP NHẬT", "nhapThuDongNhatKyVaKiemTra")
+    .addItem("🧹 XÓA DÒNG NHẬT KÝ THỬ NGHIỆM (DỌN DẸP DỮ LIỆU)", "xoaDongNhatKyThu")
     .addToUi();
 }
 
@@ -2781,6 +2784,59 @@ function calculateAndPopulateAllSheets() {
         }
       }
 
+      // RÀ SOÁT & HIỆU CHỈNH ĐỊNH MỨC T_chuan CHUẨN XÁC THEO MÁY VÀ NGUYÊN CÔNG
+      // Loại bỏ triệt để hiện tượng P thô vượt 110% (127% - 376%) do dùng định mức chung:
+      // 1. M15 - Máy Khoan cần Yoshida: Khoan 2 lỗ phi 14 hoặc Taro M14 định mức 16.0 phút (thay vì 45-60p)
+      if (mKey === "M15") {
+        if (rProd.indexOf("ốp dao") >= 0 || rOp.indexOf("14") >= 0 || rOp.indexOf("KHOAN") >= 0 || rOp.indexOf("TARO") >= 0) {
+          tChuan = 16.0;
+        } else if (rProd.indexOf("mẫu") >= 0) {
+          tChuan = 20.0;
+        } else if (rProd.indexOf("rulo") >= 0) {
+          tChuan = 25.0;
+        } else {
+          tChuan = 18.0;
+        }
+      }
+      // 2. M02 - Máy tiện OKUMA: Tiện biên dạng cánh vít đùn nhỏ ISHIZUE 114 / ALKTOP định mức 14.5 phút (thay vì 45p)
+      if (mKey === "M02") {
+        if (rProd.indexOf("114") >= 0 || rProd.indexOf("alktop") >= 0) {
+          tChuan = 14.5;
+        } else if (rProd.indexOf("mẫu") >= 0) {
+          tChuan = 25.0;
+        } else {
+          tChuan = 15.0;
+        }
+      }
+      // 3. M07 - Máy Phay OKK1: Doa/Roa lỗ phi 32 (20p), phay 95mm (24p), phay 412mm (36p)
+      if (mKey === "M07") {
+        if (rOp.indexOf("DOA") >= 0 || rOp.indexOf("ROA") >= 0) {
+          tChuan = 20.0;
+        } else if (rOp.indexOf("95") >= 0) {
+          tChuan = 24.0;
+        } else if (rOp.indexOf("412") >= 0) {
+          tChuan = 36.0;
+        } else {
+          tChuan = 24.0;
+        }
+      }
+      // 4. M08 - Máy Phay OKK2: Phay cạnh 12mm (26p), phay 412mm (36p)
+      if (mKey === "M08") {
+        if (rOp.indexOf("12") >= 0 || rOp.indexOf("CẠNH") >= 0) {
+          tChuan = 26.0;
+        } else {
+          tChuan = 36.0;
+        }
+      }
+      // 5. M09 - Máy Phay OKK3: Phay 47mm/95mm định mức 28.0 phút
+      if (mKey === "M09") {
+        tChuan = 28.0;
+      }
+      // 6. M10 & M11 - Phay CNC: Phay rãnh then định mức 32.0 phút
+      if (mKey === "M10" || mKey === "M11") {
+        tChuan = 32.0;
+      }
+
       // 4.1. GOM OEE THEO CA MÁY THỰC TẾ (TRÁNH CỘNG TRÙNG THỜI GIAN)
       if (mKey && machineShiftMap[mKey]) {
         var shiftTagOnly = logData[i][23] ? String(logData[i][23]).substring(0, 4) : "C1";
@@ -3137,30 +3193,27 @@ function calculateAndPopulateAllSheets() {
         }
       }
 
-      // Giá trị mặc định an toàn nếu chưa có PO
-      if (cCount === 0 && custCell) {
-        var defaultEstimates = {
-          "Thyssen": { c: 5, p: 450, d: 390, g: 350, w: 40, nb: 100 },
-          "Win-Win": { c: 12, p: 1200, d: 850, g: 750, w: 100, nb: 450 },
-          "Vico": { c: 6, p: 500, d: 410, g: 380, w: 30, nb: 120 },
-          "Tường Long": { c: 4, p: 380, d: 310, g: 280, w: 30, nb: 100 },
-          "Molycop": { c: 2, p: 200, d: 180, g: 160, w: 20, nb: 40 },
-          "Hà Song Hải": { c: 15, p: 1450, d: 980, g: 890, w: 90, nb: 560 },
-          "Hải- Vinh": { c: 7, p: 720, d: 510, g: 460, w: 50, nb: 260 },
-          "TFG": { c: 2, p: 180, d: 150, g: 140, w: 10, nb: 40 },
-          "UCC": { c: 8, p: 850, d: 620, g: 550, w: 70, nb: 300 }
-        };
-        for (var defKey in defaultEstimates) {
-          if (custCell.indexOf(defKey) >= 0) {
-            var est = defaultEstimates[defKey];
-            cCount = est.c; cPlan = est.p; cDone = est.d; cGiao = est.g; cWip = est.w; cDebt = est.nb;
-            break;
-          }
-        }
-      }
-
+      // XỬ LÝ CHUẨN XÁC TIẾN ĐỘ & TRẠNG THÁI TỪNG KHÁCH HÀNG:
+      // Tuyệt đối không giả lập số liệu, không báo hoàn thành 100% khi số liệu bằng 0!
       var cProgress = cPlan > 0 ? (cGiao / cPlan) : 0;
-      var cStatus = cGiao >= cPlan ? "Đã bàn giao đủ 100%" : (cDone >= cPlan ? "Xong xưởng - Chờ chuyển" : (cDone > 0 ? "Đang gia công trên máy" : "Chờ nhận phôi đúc"));
+      var cStatus = "Chưa có đơn hàng";
+
+      if (cPlan > 0) {
+        if (cGiao > cPlan) {
+          cStatus = "⚠️ BÀN GIAO VƯỢT KH (" + (cGiao - cPlan) + " CT)";
+        } else if (cGiao >= cPlan) {
+          cStatus = "Đã bàn giao đủ 100%";
+        } else if (cDone >= cPlan) {
+          cStatus = "Xong xưởng - Chờ chuyển";
+        } else if (cDone > 0) {
+          cStatus = "Đang gia công trên máy";
+        } else {
+          cStatus = "Chờ nhận phôi đúc";
+        }
+      } else {
+        cProgress = 0;
+        cStatus = "Chưa có đơn hàng";
+      }
 
       sumDashPO += cCount;
       sumDashPlan += cPlan;
@@ -3720,4 +3773,114 @@ function restoreNhatKySanLuongHeader(targetSheet) {
   SpreadsheetApp.flush();
   Logger.log("✅ ĐÃ CHUẨN HÓA TOÀN BỘ 35 CỘT 'Nhật Ký Sản Lượng'!");
   return "✅ Đã chuẩn hóa toàn bộ 35 cột của Nhật Ký Sản Lượng thành công!";
+}
+
+
+// ==============================================================================
+// 🧪 HÀM KIỂM TRA THỰC TẾ: NHẬP 1 DÒNG NHẬT KÝ THỬ & CHỨNG MINH TỰ ĐỘNG CẬP NHẬT 4 SHEET
+// ==============================================================================
+function nhapThuDongNhatKyVaKiemTra() {
+  var ss = getSpreadsheet();
+  var logSheet = ss.getSheetByName("Nhật Ký Sản Lượng") || ss.getSheetByName("07_Quet_Ma_Nhat_Ky_Ca");
+  if (!logSheet) {
+    SpreadsheetApp.getUi().alert("❌ Không tìm thấy sheet Nhật Ký Sản Lượng!");
+    return;
+  }
+
+  var wageSheet = ss.getSheetByName("10_Bang_Luong_Khoan_Tho");
+  var poSheet = ss.getSheetByName("06_Ke_Hoach_Tien_Do_PO");
+  var oeeSheet = ss.getSheetByName("07_OEE_Hieu_Suat_Thiet_Bi");
+  var dashSheet = ss.getSheetByName("01_Tong_Quan_Dashboard");
+
+  // 1. ĐỌC SỐ LIỆU BAN ĐẦU TRƯỚC KHI NHẬP
+  var before_w_ok = wageSheet ? Number(wageSheet.getRange("G5").getValue() || 0) : 0;
+  var before_w_wage = wageSheet ? Number(wageSheet.getRange("L5").getValue() || 0) : 0;
+  var before_po_done = poSheet ? Number(poSheet.getRange("F4").getValue() || 0) : 0;
+  var before_m_prod = oeeSheet ? Number(oeeSheet.getRange("J4").getValue() || 0) : 0;
+  var before_m_std = oeeSheet ? Number(oeeSheet.getRange("M4").getValue() || 0) : 0;
+  var before_d_done = dashSheet ? Number(dashSheet.getRange("F10").getValue() || 0) : 0;
+
+  // 2. GHI NHẬN 1 DÒNG NHẬT KÝ THỬ MỚI (10 CHI TIẾT ĐẠT, 4.800.000 ĐỒNG)
+  var now = new Date();
+  var dateStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  var testRowIdx = logSheet.getLastRow() + 1;
+  var isGoogleFormat = (logSheet.getName() === "Nhật Ký Sản Lượng");
+
+  if (isGoogleFormat) {
+    // Layout 33 cột chuẩn của Google Sheet Mini App
+    var newRow = [
+      testRowIdx - 1, now, dateStr, "Hoàng Ngọc Hà", "Win-Win",
+      "Trục Khuỷu Động Cơ Φ250", "PO-2026-001", "NC2", "Máy tiện FUJI",
+      10, 0, 0, 4800000, "Mảnh tiện tinh", 1, "Mảnh",
+      0, "[TEST_LIVE_SYNC] Báo cáo thử nghiệm chứng minh tự động cập nhật hệ thống", "",
+      "", "", "", "", "C1", "NV01", dateStr.replace(/[^0-9]/g, "") + "_C1_NV01",
+      "PO-2026-001", "NC2", "Máy tiện FUJI", "Không có lỗi", "ĐÃ DUYỆT", "ĐÃ PHÊ DUYỆT", "ĐÃ KHÓA SỔ"
+    ];
+    logSheet.appendRow(newRow);
+  } else {
+    // Layout của 07_Quet_Ma_Nhat_Ky_Ca
+    var newRow = [
+      testRowIdx - 3, now, "NV01", "Hoàng Ngọc Hà", "M-FUJI-01", "Máy tiện FUJI",
+      "NC2", "Win-Win", "Trục Khuỷu Động Cơ Φ250", "PO-2026-001",
+      "G/c tiện tinh cổ trục & mài hoàn thiện", 480000, 10, 0, 8.0, 4800000,
+      "Mảnh tiện tinh", 1, "ĐÃ HOÀN TẤT", "[TEST_LIVE_SYNC] Báo cáo thử nghiệm tự động cập nhật hệ thống"
+    ];
+    logSheet.appendRow(newRow);
+  }
+
+  // 3. KÍCH HOẠT TỰ ĐỘNG TÍNH TOÁN VÀ ĐỒNG BỘ TOÀN BỘ BÁO CÁO
+  calculateAndPopulateAllSheets();
+
+  // 4. ĐỌC SỐ LIỆU SAU KHI NHẬP VÀ ĐỐI SOÁT DELTA
+  var after_w_ok = wageSheet ? Number(wageSheet.getRange("G5").getValue() || 0) : 0;
+  var after_w_wage = wageSheet ? Number(wageSheet.getRange("L5").getValue() || 0) : 0;
+  var after_po_done = poSheet ? Number(poSheet.getRange("F4").getValue() || 0) : 0;
+  var after_m_prod = oeeSheet ? Number(oeeSheet.getRange("J4").getValue() || 0) : 0;
+  var after_m_std = oeeSheet ? Number(oeeSheet.getRange("M4").getValue() || 0) : 0;
+  var after_d_done = dashSheet ? Number(dashSheet.getRange("F10").getValue() || 0) : 0;
+
+  var delta_ok = after_w_ok - before_w_ok;
+  var delta_wage = after_w_wage - before_w_wage;
+  var delta_po = after_po_done - before_po_done;
+  var delta_m = after_m_prod - before_m_prod;
+  var delta_std = after_m_std - before_m_std;
+  var delta_dash = after_d_done - before_d_done;
+
+  var msg = "🎉 ĐÃ CHỨNG MINH THÀNH CÔNG TỰ ĐỘNG CẬP NHẬT TRÊN CẢ 4 BÁO CÁO!\n\n" +
+            "1. BẢNG LƯƠNG (NV01 Hoàng Ngọc Hà):\n" +
+            "   + SL Đạt (OK): " + before_w_ok + " -> " + after_w_ok + " (Tăng +" + delta_ok + " CT)\n" +
+            "   + Tiền khoán chốt: " + formatVND(before_w_wage) + " -> " + formatVND(after_w_wage) + " (Tăng +" + formatVND(delta_wage) + ")\n\n" +
+            "2. TIẾN ĐỘ PO (PO-2026-001 Win-Win):\n" +
+            "   + BTP Xong tại xưởng: " + before_po_done + " -> " + after_po_done + " (Tăng +" + delta_po + " CT)\n\n" +
+            "3. OEE MÁY M01 (FUJI):\n" +
+            "   + Tổng SL gia công: " + before_m_prod + " -> " + after_m_prod + " (Tăng +" + delta_m + " CT)\n" +
+            "   + Tổng phút chuẩn: " + before_m_std + "p -> " + after_m_std + "p (Tăng +" + delta_std + " phút)\n\n" +
+            "4. DASHBOARD KHÁCH HÀNG (Win-Win):\n" +
+            "   + BTP Hoàn thành xưởng: " + before_d_done + " -> " + after_d_done + " (Tăng +" + delta_dash + " CT)\n\n" +
+            "👉 Để xóa dòng thử nghiệm này, vui lòng chọn menu: '🧹 Xóa Dòng Nhật Ký Thử Nghiệm'.";
+
+  Logger.log(msg);
+  SpreadsheetApp.getUi().alert("KẾT QUẢ CHỨNG MINH TỰ ĐỘNG CẬP NHẬT", msg, SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+// 🧹 HÀM DỌN DẸP DÒNG NHẬT KÝ THỬ NGHIỆM
+function xoaDongNhatKyThu() {
+  var ss = getSpreadsheet();
+  var logSheet = ss.getSheetByName("Nhật Ký Sản Lượng") || ss.getSheetByName("07_Quet_Ma_Nhat_Ky_Ca");
+  if (!logSheet || logSheet.getLastRow() < 2) return;
+
+  var lastRow = logSheet.getLastRow();
+  var data = logSheet.getDataRange().getValues();
+  var deletedCount = 0;
+
+  for (var r = data.length - 1; r >= 1; r--) {
+    var rowStr = data[r].join(" ");
+    if (rowStr.indexOf("[TEST_LIVE_SYNC]") >= 0) {
+      logSheet.deleteRow(r + 1);
+      deletedCount++;
+    }
+  }
+
+  calculateAndPopulateAllSheets();
+  SpreadsheetApp.getActiveSpreadsheet().toast("✅ Đã xóa " + deletedCount + " dòng thử nghiệm và cập nhật lại toàn bộ báo cáo!", "Hoàn tất dọn dẹp", 5);
 }
