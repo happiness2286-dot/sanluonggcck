@@ -15,6 +15,11 @@ var MINI_APP_URL = "https://happiness2286-dot.github.io/sanluonggcck/";       //
 
 // 🟢 HÀM MỞ GOOGLE SHEET AN TOÀN (HỖ TRỢ CẢ THỦ CÔNG, BỘ HẸN GIỜ TRIGGERS & STANDALONE SCRIPT)
 function getSpreadsheet() {
+  try {
+    var active = SpreadsheetApp.getActiveSpreadsheet();
+    if (active) return active;
+  } catch (eActive) {}
+
   if (typeof SPREADSHEET_ID !== 'undefined' && SPREADSHEET_ID && SPREADSHEET_ID.trim() !== "") {
     try {
       return SpreadsheetApp.openById(SPREADSHEET_ID.trim());
