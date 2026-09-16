@@ -32,8 +32,7 @@ var SCRAP_FOLDER_ID = "";   // Ví dụ: "9Z8y7X6w5V4u3T..." (Để trống hệ
 
 // 🤖 CẤU HÌNH TELEGRAM BOT TỰ ĐỘNG CẢNH BÁO
 var TELEGRAM_BOT_TOKEN = "8871498341:AAFTzNNaCNXZlaTJlh8znudxrYFs69bu74s";
-// Dán Token Bot lấy từ @BotFather vào đây (Ví dụ: "8871498341:AAFTz...")
-var TELEGRAM_CHAT_ID = "-5457065729";   // Dán Chat ID Nhóm Telegram xưởng vào đây (Ví dụ: "-100123456789")
+var TELEGRAM_CHAT_ID = "5422717407";   // Chat ID Quản Đốc Hoàng Hà (5422717407) hoặc Chat ID nhóm xưởng (-100xxxxxxxxxx)
 
 // 🌐 URL Mini App Sản Lượng của bạn (Netlify hoặc GitHub Pages)
 var MINI_APP_URL = "https://happiness2286-dot.github.io/sanluonggcck/";       // Dán link GitHub Pages (ví dụ: "https://ten-ban.github.io/SANLUONG2026/") hoặc Netlify vào đây!
@@ -623,31 +622,82 @@ function authorizeTelegram() {
   Logger.log("✅ ĐÃ XÁC THỰC QUYỀN TELEGRAM THÀNH CÔNG! Phản hồi Bot: " + response.getContentText());
 }
 
-// Hàm gửi tin nhắn Telegram Bot chuẩn API
+// Hàm gửi tin nhắn Telegram Bot chuẩn API (Gửi cho Quản Đốc và Nhóm xưởng)
 function sendTelegramMessage(htmlMessageText) {
-  if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN.trim() === "" || !TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID.trim() === "") {
-    console.log("⚠️ Chưa cấu hình TELEGRAM_BOT_TOKEN hoặc TELEGRAM_CHAT_ID");
+  if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN.trim() === "") {
+    console.log("⚠️ Chưa cấu hình TELEGRAM_BOT_TOKEN");
     return;
   }
 
-  var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/sendMessage";
-  var payload = {
-    "chat_id": TELEGRAM_CHAT_ID.trim(),
-    "text": htmlMessageText,
-    "parse_mode": "HTML",
-    "disable_web_page_preview": false
-  };
+  // Danh sách ID nhận cảnh báo (Ưu tiên ID cá nhân Quản Đốc 5422717407 và ID nhóm)
+  var targetChatIds = ["5422717407"];
+  if (TELEGRAM_CHAT_ID && targetChatIds.indexOf(TELEGRAM_CHAT_ID.trim()) === -1) {
+    targetChatIds.push(TELEGRAM_CHAT_ID.trim());
+  }
 
-  var options = {
-    "method": "post",
-    "contentType": "application/json",
-    "payload": JSON.stringify(payload),
-    "muteHttpExceptions": true
-  };
+  for (var c = 0; c < targetChatIds.length; c++) {
+    var cId = targetChatIds[c];
+    if (!cId || cId === "") continue;
+    try {
+      var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/sendMessage";
+      var payload = {
+        "chat_id": cId,
+        "text": htmlMessageText,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": false
+      };
+      var options = {
+        "method": "post",
+        "contentType": "application/json",
+        "payload": JSON.stringify(payload),
+        "muteHttpExceptions": true
+      };
+      var response = UrlFetchApp.fetch(url, options);
+      console.log("📲 Đã gửi cảnh báo Telegram tới [" + cId + "]: " + response.getContentText());
+    } catch (eSend) {
+      console.log("Lỗi gửi Telegram tới [" + cId + "]: " + eSend.toString());
+    }
+  }
+}
 
-  // Gọi UrlFetchApp (Để Google Apps Script tự bật Popup xin cấp quyền khi chạy)
-  var response = UrlFetchApp.fetch(url, options);
-  console.log("📲 Đã gửi cảnh báo Telegram thành công! Phản hồi: " + response.getContentText());
+// 📲 HÀM BẮN THỬ CẢNH BÁO TELEGRAM TỨC THÌ (CHO QUẢN ĐỐC TEST NGAY)
+function banThuCanhBaoTelegramNgay() {
+  var ss = getSpreadsheet();
+  checkOverdueReports("Kiểm Thử Trực Tiếp");
+  try {
+    ss.toast("Đã bắn cảnh báo đối soát ca qua Telegram Bot thành công!", "📲 TELEGRAM TEST", 6);
+  } catch (e) {}
+}
+
+// 🔍 HÀM TỰ ĐỘNG PHÁT HIỆN CHAT ID NHÓM TELEGRAM XƯỞNG
+function layIdNhomTelegramTuDong() {
+  var ss = getSpreadsheet();
+  try {
+    var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/getUpdates";
+    var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    var json = JSON.parse(res.getContentText());
+    var foundChat = null;
+    if (json.ok && json.result) {
+      for (var i = json.result.length - 1; i >= 0; i--) {
+        var msg = json.result[i].message || json.result[i].my_chat_member;
+        if (msg && msg.chat && (msg.chat.type === "group" || msg.chat.type === "supergroup")) {
+          foundChat = msg.chat;
+          break;
+        }
+      }
+    }
+    if (foundChat) {
+      var reportMsg = "✅ Đã tìm thấy nhóm: " + foundChat.title + "\n👉 Chat ID: " + foundChat.id + "\n(Hãy copy Chat ID này vào dòng 36 của script)";
+      Logger.log(reportMsg);
+      ss.toast(reportMsg, "🔍 TÌM THẤY NHÓM", 10);
+    } else {
+      var errMsg = "⚠️ Chưa thấy tin nhắn trong nhóm! Hãy thêm bot @gcck_sanluong_2026_bot vào nhóm xưởng, cấp quyền admin và nhắn 1 tin rồi bấm lại nút này!";
+      Logger.log(errMsg);
+      ss.toast(errMsg, "⚠️ CHƯA THẤY NHÓM", 10);
+    }
+  } catch (e) {
+    Logger.log("Lỗi tìm nhóm: " + e.toString());
+  }
 }
 
 // ==============================================================================
@@ -720,6 +770,8 @@ function onOpen() {
     .addSeparator()
     .addItem("🧹 XÓA 17 SHEET MÁY LẺ CŨ (CHO GỌN BẢNG TÍNH)", "deleteOld17MachineSheets")
     .addItem("⏰ Cài Đặt Bộ Hẹn Giờ Cảnh Báo 3 Ca (14h15, 22h15, 06h15)", "setupShiftTriggers")
+    .addItem("📲 BẮN THỬ CẢNH BÁO TELEGRAM NGAY LẬP TỨC", "banThuCanhBaoTelegramNgay")
+    .addItem("🔍 TỰ ĐỘNG TÌM ID NHÓM TELEGRAM XƯỞNG", "layIdNhomTelegramTuDong")
     .addItem("⚡ BẬT TỰ ĐỘNG ĐỒNG BỘ MỌI BÁO CÁO (AUTO-SYNC TRIGGERS)", "setupCalculationTriggers")
     .addSeparator()
     .addItem("🎯 BÀI THỬ TOÀN DIỆN: SẢN LƯỢNG MỚI ➔ KCS DUYỆT ➔ QUẢN ĐỐC CHỐT (ĐẠT 95%)", "baiThuKiemTraQuyTrinhDuyet3Cap")
