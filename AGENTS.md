@@ -50,13 +50,14 @@ Hệ thống Google Sheet đã được chuẩn hóa và loại bỏ toàn bộ 
 
 ## 5. HỆ THỐNG CẢNH BÁO TELEGRAM CHO 3 CA
 - **Bot**: `@gcck_sanluong_2026_bot` (Token: `8871498341:AAFTzNNaCNXZlaTJlh8znudxrYFs69bu74s`)
-- **Nhóm Telegram xưởng**: Chat ID `-5457065729`
+- **Quản Đốc / Nhóm xưởng**: Chat ID `5422717407` (Quản Đốc Hoàng Hà) và Nhóm xưởng
 - **Bộ hẹn giờ (Triggers)**:
   - Ca 1 (Sáng): Tự động quét và nhắc nhở lúc **14h15**
   - Ca 2 (Chiều): Tự động quét và nhắc nhở lúc **22h15**
   - Ca 3 (Đêm): Tự động quét và nhắc nhở lúc **06h15 sáng hôm sau**
-- Hàm kích hoạt: `setupShiftTriggers()`
-- Hàm kiểm tra tức thì: `checkShift1_14h()`, `checkShift2_22h()`, `checkShift3_06h()`
+- Hàm kích hoạt bộ hẹn giờ: `setupShiftTriggers()`
+- Hàm kiểm tra tức thì: `banThuCanhBaoTelegramNgay()`, `checkShift1_14h()`, `checkShift2_22h()`, `checkShift3_06h()`
+- Hàm tìm ID nhóm xưởng tự động: `layIdNhomTelegramTuDong()`
 
 ---
 
