@@ -289,6 +289,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 workerSection.style.display = 'block';
                 adminSection.style.display = 'none';
             }
+
+            // Cập nhật nút liên kết Telegram 1-1 cho công nhân
+            const btnConnectTelegram = document.getElementById('btnConnectTelegram');
+            const telegramStatusText = document.getElementById('telegramStatusText');
+            if (btnConnectTelegram && currentUser) {
+                const workerCode = currentUser.id || currentUser.username || "THO";
+                btnConnectTelegram.href = `https://t.me/gcck_sanluong_2026_bot?start=${encodeURIComponent(workerCode)}`;
+                if (telegramStatusText) {
+                    telegramStatusText.innerHTML = `Thợ: <b style="color: #38bdf8;">${currentUser.name}</b> (${workerCode}) • Bấm để mở Telegram`;
+                }
+                btnConnectTelegram.onclick = () => {
+                    if (typeof showToast === 'function') {
+                        showToast(`📲 Đang chuyển sang Telegram... Bấm nút BẮT ĐẦU (START) để hoàn tất liên kết mã ${workerCode}!`, 'info', 6000);
+                    }
+                };
+            }
+
             updateWageDisplay();
         }
     }

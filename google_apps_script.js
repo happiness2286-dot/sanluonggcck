@@ -496,6 +496,14 @@ function checkShift3_06h() {
 function checkOverdueReports(shiftName) {
   try {
     var ss = getSpreadsheet();
+
+    // 1. Tự động đồng bộ các thợ vừa bấm Start với Bot Telegram
+    try {
+      dongBoLienKetTelegramTho();
+    } catch (eSync) {
+      console.log("Lưu ý đồng bộ Telegram: " + eSync.toString());
+    }
+
     var sheet = ss.getSheetByName("Nhật Ký Sản Lượng");
     if (!sheet) sheet = ss.getSheets()[0];
 
@@ -525,53 +533,72 @@ function checkOverdueReports(shiftName) {
 
     // Danh sách 15 công nhân mặc định từ cơ sở dữ liệu gốc của dự án
     var DEFAULT_WORKERS = [
-      "Hoàng Ngọc Hà", "Nguyễn Trung Đông", "Phùng Đình Hùng", "Vũ Tiến Thuận",
-      "Nguyễn Mạnh Hà", "Nguyễn Văn Thanh", "Phùng Gia Phúc", "Trần Văn Dũng",
-      "Trần Đăng Ninh", "Phạm Văn Tráng", "Phùng Công Thắng", "Phạm Ngọc Sam",
-      "Trần Văn Quỳnh", "Đinh Văn Nhận", "Đặng Ngọc Long"
+      { name: "Hoàng Ngọc Hà", code: "NV01", chatId: "5422717407", user: "hoangha" },
+      { name: "Nguyễn Trung Đông", code: "NV02", chatId: "", user: "trungdong" },
+      { name: "Phùng Đình Hùng", code: "NV03", chatId: "", user: "dinhhung" },
+      { name: "Vũ Tiến Thuận", code: "NV04", chatId: "", user: "tienthuan" },
+      { name: "Nguyễn Mạnh Hà", code: "NV05", chatId: "", user: "manhha" },
+      { name: "Nguyễn Văn Thanh", code: "NV06", chatId: "", user: "vanthanh" },
+      { name: "Phùng Gia Phúc", code: "NV07", chatId: "", user: "giaphuc" },
+      { name: "Trần Văn Dũng", code: "NV08", chatId: "", user: "vandung" },
+      { name: "Trần Đăng Ninh", code: "NV09", chatId: "", user: "dangninh" },
+      { name: "Phạm Văn Tráng", code: "NV10", chatId: "", user: "vantrang" },
+      { name: "Phùng Công Thắng", code: "NV11", chatId: "", user: "congthang" },
+      { name: "Phạm Ngọc Sam", code: "NV12", chatId: "", user: "ngocsam" },
+      { name: "Trần Văn Quỳnh", code: "NV13", chatId: "", user: "vanquynh" },
+      { name: "Đinh Văn Nhận", code: "NV14", chatId: "", user: "vannhan" },
+      { name: "Đặng Ngọc Long", code: "NV15", chatId: "", user: "ngoclong" }
     ];
 
-    // Đọc danh sách Công nhân 100% trực tiếp từ Google Sheet "Danh Sách Công Nhân"
-    var allWorkers = [];
+    // Đọc danh sách Công nhân từ Sheet "Danh Sách Công Nhân"
     var workerSheet = ss.getSheetByName("Danh Sách Công Nhân") || ss.getSheetByName("CongNhan");
-
-    // Nếu chưa có Sheet "Danh Sách Công Nhân", tự động tạo Sheet chuẩn & điền sẵn 15 công nhân gốc
     if (!workerSheet) {
       workerSheet = ss.insertSheet("Danh Sách Công Nhân");
-      workerSheet.appendRow(["Họ Và Tên Công Nhân", "Tài Khoản / Mã", "Trạng Thái"]);
-      DEFAULT_WORKERS.forEach(function (wName, idx) {
-        workerSheet.appendRow([wName, "NV" + (idx + 1 < 10 ? "0" + (idx + 1) : (idx + 1)), "Đang làm"]);
+      workerSheet.appendRow(["Họ Và Tên Công Nhân", "Tài Khoản / Mã", "Trạng Thái", "Telegram Chat ID", "Username Telegram"]);
+      DEFAULT_WORKERS.forEach(function (w) {
+        workerSheet.appendRow([w.name, w.code, "Đang làm", w.chatId, w.user]);
       });
-      console.log("✅ Đã tự động khởi tạo Sheet 'Danh Sách Công Nhân' với 15 công nhân gốc của dự án!");
-    }
-
-    // Đọc dữ liệu công nhân từ Sheet "Danh Sách Công Nhân"
-    var wData = workerSheet.getDataRange().getValues();
-    for (var w = 1; w < wData.length; w++) {
-      var name = wData[w][0] ? String(wData[w][0]).trim() : '';
-      var status = wData[w][2] ? String(wData[w][2]).trim().toLowerCase() : '';
-
-      // Bỏ qua dòng tiêu đề hoặc công nhân đã đánh dấu "Đã nghỉ" / "Nghỉ việc"
-      if (name && name !== "Họ Và Tên Công Nhân" && status !== "nghỉ việc" && status !== "đã nghỉ") {
-        allWorkers.push(name);
+      console.log("✅ Đã khởi tạo Sheet 'Danh Sách Công Nhân' với 5 cột chuẩn và ID Quản Đốc!");
+    } else {
+      // Đảm bảo đủ 5 cột tiêu đề
+      if (workerSheet.getLastColumn() < 5) {
+        workerSheet.getRange(1, 4).setValue("Telegram Chat ID");
+        workerSheet.getRange(1, 5).setValue("Username Telegram");
       }
     }
 
-    // Nếu Sheet vẫn rỗng (do Quản đốc lỡ xóa hết dòng), dùng mặc định 15 công nhân gốc
-    if (allWorkers.length === 0) {
-      allWorkers = DEFAULT_WORKERS.slice();
-      // Tự động điền lại vào Sheet cho Quản đốc
-      if (workerSheet.getLastRow() <= 1) {
-        DEFAULT_WORKERS.forEach(function (wName, idx) {
-          workerSheet.appendRow([wName, "NV" + (idx + 1 < 10 ? "0" + (idx + 1) : (idx + 1)), "Đang làm"]);
+    var wData = workerSheet.getDataRange().getValues();
+    var allWorkers = []; // Mảng đối tượng { name, code, chatId, teleUser }
+
+    for (var w = 1; w < wData.length; w++) {
+      var name = wData[w][0] ? String(wData[w][0]).trim() : '';
+      var code = wData[w][1] ? String(wData[w][1]).trim() : '';
+      var status = wData[w][2] ? String(wData[w][2]).trim().toLowerCase() : '';
+      var chatId = wData[w][3] ? String(wData[w][3]).trim() : '';
+      var teleUser = wData[w][4] ? String(wData[w][4]).trim() : '';
+
+      if (name && name !== "Họ Và Tên Công Nhân" && status !== "nghỉ việc" && status !== "đã nghỉ") {
+        allWorkers.push({
+          name: name,
+          code: code,
+          chatId: chatId,
+          teleUser: teleUser
         });
       }
     }
 
-    // Lọc công nhân chưa nộp báo cáo
+    // Nếu rỗng, nạp từ mặc định
+    if (allWorkers.length === 0) {
+      DEFAULT_WORKERS.forEach(function (w) {
+        allWorkers.push({ name: w.name, code: w.code, chatId: w.chatId, teleUser: w.user });
+        workerSheet.appendRow([w.name, w.code, "Đang làm", w.chatId, w.user]);
+      });
+    }
+
+    // Lọc những công nhân chưa nộp báo cáo ca
     var missingWorkers = [];
     allWorkers.forEach(function (w) {
-      if (!reportedWorkers.has(w)) {
+      if (!reportedWorkers.has(w.name)) {
         missingWorkers.push(w);
       }
     });
@@ -581,41 +608,203 @@ function checkOverdueReports(shiftName) {
       return;
     }
 
-    // Soạn tin nhắn HTML cảnh báo cho Telegram
-    var messageText = "<b>⚠️ CẢNH BÁO QUÁ HẠN BÁO CÁO SẢN LƯỢNG GCCK</b>\n" +
-      "--------------------------------------\n" +
-      "📌 <b>Kiểm tra:</b> " + shiftName + "\n" +
-      "📅 <b>Ngày:</b> " + todayShortStr + "\n" +
-      "⏰ <b>Thời điểm:</b> " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HH:mm") + "\n" +
-      "--------------------------------------\n" +
-      "🔴 <b>CÔNG NHÂN CHƯA NỘP BÁO CÁO (" + missingWorkers.length + " người):</b>\n";
+    // --------------------------------------------------------------------------
+    // 1. GỬI TIN NHẮN CẢNH BÁO 1-1 RIÊNG BIỆT CHO TỪNG CÔNG NHÂN CHƯA NỘP
+    // --------------------------------------------------------------------------
+    var personalAlertCount = 0;
+    missingWorkers.forEach(function (mWorker) {
+      if (mWorker.chatId && mWorker.chatId !== "" && mWorker.chatId !== "5422717407") {
+        var personalMsg = "⚠️ <b>NHẮC NHỞ: CHƯA NỘP BÁO CÁO SẢN LƯỢNG CA</b>\n" +
+          "--------------------------------------\n" +
+          "👋 Chào anh <b>" + mWorker.name + "</b> (" + mWorker.code + ")!\n" +
+          "📌 <b>Ca làm việc:</b> " + shiftName + "\n" +
+          "📅 <b>Ngày:</b> " + todayShortStr + "\n" +
+          "⏰ <b>Thời điểm kiểm tra:</b> " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HH:mm") + "\n" +
+          "--------------------------------------\n" +
+          "🔴 Hệ thống đối soát chưa ghi nhận phiếu sản lượng ca của anh.\n" +
+          "👉 <b>Anh vui lòng bấm vào link dưới để nộp báo cáo ngay nhé:</b>\n" +
+          MINI_APP_URL.trim() + "\n\n" +
+          "<i>Hệ Thống Tự Động Quản Lý Sản Lượng GCCK VICO 2026</i>";
 
-    missingWorkers.forEach(function (w, idx) {
-      messageText += (idx + 1) + ". <b>" + w + "</b>\n";
+        sendSingleTelegramMessage(mWorker.chatId, personalMsg);
+        personalAlertCount++;
+      }
     });
 
-    messageText += "--------------------------------------\n";
-    if (MINI_APP_URL && MINI_APP_URL.trim() !== "") {
-      messageText += "📲 <b>Bấm link bên dưới để nộp báo cáo ngay:</b>\n" + MINI_APP_URL.trim();
-    } else {
-      messageText += "👉 <i>Đề nghị công nhân truy cập Web App nộp báo cáo bổ sung ngay!</i>";
+    // --------------------------------------------------------------------------
+    // 2. GỬI BÁO CÁO TỔNG HỢP CHO QUẢN ĐỐC HOÀNG HÀ VÀ NHÓM XƯỞNG
+    // --------------------------------------------------------------------------
+    var summaryMessage = "<b>⚠️ BÁO CÁO ĐỐI SOÁT QUÁ HẠN SẢN LƯỢNG CA</b>\n" +
+      "--------------------------------------\n" +
+      "📌 <b>Ca kiểm tra:</b> " + shiftName + "\n" +
+      "📅 <b>Ngày:</b> " + todayShortStr + " lúc " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HH:mm") + "\n" +
+      "🏭 <b>Xưởng:</b> Gia Công Cơ Khí VICO\n" +
+      "--------------------------------------\n" +
+      "🔴 <b>DANH SÁCH THỢ CHƯA NỘP BÁO CÁO (" + missingWorkers.length + " người):</b>\n";
+
+    missingWorkers.forEach(function (w, idx) {
+      var teleStatus = w.chatId ? " <i>[📲 Đã gửi tin 1-1]</i>" : " <i>[⚠️ Chưa liên kết Telegram]</i>";
+      summaryMessage += (idx + 1) + ". <b>" + w.name + "</b> (" + w.code + ")" + teleStatus + "\n";
+    });
+
+    summaryMessage += "--------------------------------------\n";
+    summaryMessage += "📲 <b>Link Mini App Nộp Sản Lượng:</b>\n" + MINI_APP_URL.trim();
+
+    console.log(summaryMessage);
+
+    // Gửi tin tổng hợp tới Quản Đốc Hoàng Hà
+    sendSingleTelegramMessage("5422717407", summaryMessage);
+
+    // Gửi tin tổng hợp tới Nhóm xưởng GCCK_VICO
+    if (TELEGRAM_CHAT_ID && TELEGRAM_CHAT_ID.trim() !== "") {
+      sendSingleTelegramMessage(TELEGRAM_CHAT_ID.trim(), summaryMessage);
     }
-
-    console.log(messageText);
-
-    // Gửi cảnh báo qua Telegram Bot API
-    sendTelegramMessage(messageText);
 
   } catch (err) {
     if (err.toString().indexOf("UrlFetchApp") !== -1 || err.toString().indexOf("permission") !== -1) {
-      throw err; // Ném lỗi ra ngoài để Google Apps Script bắt buộc mở Popup Cấp Quyền (Authorization Required)!
+      throw err;
     }
     console.log("Lỗi kiểm tra cảnh báo quá hạn: " + err.toString());
   }
 }
 
+// 📲 HÀM GỬI 1 TIN NHẮN TELEGRAM ĐÍCH DANH THEO CHAT ID (1-1 HOẶC NHÓM)
+function sendSingleTelegramMessage(chatId, htmlMessageText) {
+  if (!TELEGRAM_BOT_TOKEN || !chatId) return;
+  try {
+    var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/sendMessage";
+    var payload = {
+      "chat_id": chatId.toString().trim(),
+      "text": htmlMessageText,
+      "parse_mode": "HTML",
+      "disable_web_page_preview": false
+    };
+    var options = {
+      "method": "post",
+      "contentType": "application/json",
+      "payload": JSON.stringify(payload),
+      "muteHttpExceptions": true
+    };
+    var res = UrlFetchApp.fetch(url, options);
+    console.log("📲 Đã gửi Telegram tới [" + chatId + "]: " + res.getResponseCode());
+  } catch (e) {
+    console.log("Lỗi sendSingleTelegramMessage tới [" + chatId + "]: " + e.toString());
+  }
+}
+
+// 🔄 HÀM TỰ ĐỘNG ĐỒNG BỘ LIÊN KẾT TELEGRAM CHO TẤT CẢ CÔNG NHÂN TỪ GETUPDATES
+function dongBoLienKetTelegramTho() {
+  var ss = getSpreadsheet();
+  var wSheet = ss.getSheetByName("Danh Sách Công Nhân") || ss.getSheetByName("CongNhan");
+  if (!wSheet) return { success: false, message: "Không tìm thấy sheet Danh Sách Công Nhân" };
+
+  if (wSheet.getLastColumn() < 5) {
+    wSheet.getRange(1, 4).setValue("Telegram Chat ID");
+    wSheet.getRange(1, 5).setValue("Username Telegram");
+  }
+
+  var data = wSheet.getDataRange().getValues();
+  if (data.length <= 1) return { success: false, message: "Sheet chưa có dữ liệu thợ" };
+
+  // Tạo map tra cứu theo Mã nhân viên (NV01, NV02,...) và Tên Đăng Nhập
+  var workerMap = {}; // key -> rowIndex (1-based)
+  for (var r = 1; r < data.length; r++) {
+    var name = String(data[r][0] || "").trim();
+    var code = String(data[r][1] || "").trim().toUpperCase();
+    var rowIdx = r + 1;
+    if (code) workerMap[code] = rowIdx;
+    if (name) {
+      workerMap[name.toLowerCase()] = rowIdx;
+      // Không dấu
+      var clean = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (clean) workerMap[clean] = rowIdx;
+    }
+  }
+
+  // Đảm bảo Hoàng Ngọc Hà luôn có ID 5422717407
+  if (workerMap["NV01"]) {
+    var curHaId = String(wSheet.getRange(workerMap["NV01"], 4).getValue() || "").trim();
+    if (!curHaId) {
+      wSheet.getRange(workerMap["NV01"], 4).setValue("5422717407");
+      wSheet.getRange(workerMap["NV01"], 5).setValue("Quản Đốc Hoàng Hà");
+    }
+  }
+
+  // Quét getUpdates từ Telegram API
+  var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/getUpdates";
+  var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  var json = JSON.parse(res.getContentText());
+
+  var linkedCount = 0;
+  var newlyLinked = [];
+
+  if (json.ok && json.result && Array.isArray(json.result)) {
+    var updates = json.result;
+    for (var u = 0; u < updates.length; u++) {
+      var msg = updates[u].message;
+      if (!msg || !msg.text) continue;
+
+      var text = String(msg.text).trim();
+      var from = msg.from || {};
+      var chatId = String(msg.chat.id);
+      var username = from.username ? ("@" + from.username) : (from.first_name || "");
+
+      // Bỏ qua nếu là tin nhắn trong nhóm (chatId âm)
+      if (chatId.indexOf("-") === 0) continue;
+
+      // Trích xuất mã nhân viên
+      var matchedCode = "";
+      if (text.indexOf("/start") === 0) {
+        var parts = text.split(" ");
+        if (parts.length > 1) {
+          matchedCode = parts[1].trim().toUpperCase();
+        }
+      } else {
+        matchedCode = text.trim().toUpperCase();
+      }
+
+      var targetRow = workerMap[matchedCode] || workerMap[matchedCode.toLowerCase()];
+      if (targetRow) {
+        var currentChatId = String(wSheet.getRange(targetRow, 4).getValue() || "").trim();
+        if (currentChatId !== chatId) {
+          wSheet.getRange(targetRow, 4).setValue(chatId);
+          wSheet.getRange(targetRow, 5).setValue(username);
+          linkedCount++;
+          var wFullName = wSheet.getRange(targetRow, 1).getValue();
+          newlyLinked.push(wFullName + " (" + chatId + ")");
+
+          // Gửi tin nhắn chào mừng và xác nhận 1-1 cho công nhân
+          var welcomeMsg = "✅ <b>LIÊN KẾT TÀI KHOẢN THÀNH CÔNG!</b>\n" +
+            "--------------------------------------\n" +
+            "👋 Xin chào anh <b>" + wFullName + "</b> (" + matchedCode + ")!\n" +
+            "Tài khoản Telegram của anh đã được liên kết với <b>Hệ Thống Quản Lý Sản Lượng GCCK VICO 2026</b>.\n\n" +
+            "🔔 <i>Bot sẽ tự động nhắc nhở nộp sản lượng ca và gửi thông tin lương khoán trực tiếp đến anh tại đây.</i>\n\n" +
+            "👉 Mini App: " + MINI_APP_URL.trim();
+
+          sendSingleTelegramMessage(chatId, welcomeMsg);
+        }
+      }
+    }
+  }
+
+  return { success: true, count: linkedCount, details: newlyLinked };
+}
+
+// 📲 HÀM GỌI ĐỒNG BỘ TỪ MENU GOOGLE SHEET (CÓ THÔNG BÁO POPUP)
+function dongBoLienKetTelegramThoMenu() {
+  var ss = getSpreadsheet();
+  var result = dongBoLienKetTelegramTho();
+  if (result.success) {
+    var msg = result.count > 0 ?
+      ("Đã liên kết mới thành công cho " + result.count + " công nhân: " + result.details.join(", ")) :
+      "Đã quét xong! Chưa có công nhân mới bấm Start hoặc tất cả đã được liên kết đầy đủ.";
+    ss.toast(msg, "📲 ĐỒNG BỘ TELEGRAM 1-1", 7);
+  } else {
+    ss.toast("Lỗi: " + result.message, "❌ THẤT BẠI", 5);
+  }
+}
+
 // 🔑 HÀM KÍCH HOẠT POPUP ỦY QUYỀN GOOGLE CHO TELEGRAM
-// (Nếu gặp lỗi "You do not have permission to call UrlFetchApp.fetch", hãy chọn hàm này trên menu và bấm ▶ Chạy 1 lần!)
 function authorizeTelegram() {
   var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/getMe";
   var response = UrlFetchApp.fetch(url);
@@ -638,25 +827,7 @@ function sendTelegramMessage(htmlMessageText) {
   for (var c = 0; c < targetChatIds.length; c++) {
     var cId = targetChatIds[c];
     if (!cId || cId === "") continue;
-    try {
-      var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/sendMessage";
-      var payload = {
-        "chat_id": cId,
-        "text": htmlMessageText,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": false
-      };
-      var options = {
-        "method": "post",
-        "contentType": "application/json",
-        "payload": JSON.stringify(payload),
-        "muteHttpExceptions": true
-      };
-      var response = UrlFetchApp.fetch(url, options);
-      console.log("📲 Đã gửi cảnh báo Telegram tới [" + cId + "]: " + response.getContentText());
-    } catch (eSend) {
-      console.log("Lỗi gửi Telegram tới [" + cId + "]: " + eSend.toString());
-    }
+    sendSingleTelegramMessage(cId, htmlMessageText);
   }
 }
 
@@ -772,6 +943,7 @@ function onOpen() {
     .addItem("⏰ Cài Đặt Bộ Hẹn Giờ Cảnh Báo 3 Ca (14h15, 22h15, 06h15)", "setupShiftTriggers")
     .addItem("📲 BẮN THỬ CẢNH BÁO TELEGRAM NGAY LẬP TỨC", "banThuCanhBaoTelegramNgay")
     .addItem("🔍 TỰ ĐỘNG TÌM ID NHÓM TELEGRAM XƯỞNG", "layIdNhomTelegramTuDong")
+    .addItem("👥 ĐỒNG BỘ LIÊN KẾT TELEGRAM 1-1 CHO TẤT CẢ THỢ", "dongBoLienKetTelegramThoMenu")
     .addItem("⚡ BẬT TỰ ĐỘNG ĐỒNG BỘ MỌI BÁO CÁO (AUTO-SYNC TRIGGERS)", "setupCalculationTriggers")
     .addSeparator()
     .addItem("🎯 BÀI THỬ TOÀN DIỆN: SẢN LƯỢNG MỚI ➔ KCS DUYỆT ➔ QUẢN ĐỐC CHỐT (ĐẠT 95%)", "baiThuKiemTraQuyTrinhDuyet3Cap")
