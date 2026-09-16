@@ -114,20 +114,26 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
     }
 
-    // Ensure userAccounts is guaranteed to be present and populated with default accounts
-    if (!window.AppData.userAccounts || window.AppData.userAccounts.length === 0) {
-        window.AppData.userAccounts = [
-            { id: "ADMIN01", username: "admin", name: "Quản Trị Viên", role: "admin", password: "1234" },
-            { id: "NV01", username: "hoangha", name: "Hoàng Ngọc Hà", role: "worker", password: "1234" }
-        ];
+    // Đồng bộ toàn bộ 15 tài khoản công nhân (NV01-NV15) & Quản trị từ INITIAL_DATA vào AppData
+    if (!window.AppData.userAccounts || !Array.isArray(window.AppData.userAccounts) || window.AppData.userAccounts.length === 0) {
+        window.AppData.userAccounts = (window.INITIAL_DATA && window.INITIAL_DATA.userAccounts)
+            ? JSON.parse(JSON.stringify(window.INITIAL_DATA.userAccounts))
+            : [
+                { id: "ADMIN01", username: "admin", name: "Quản Trị Viên", role: "admin", password: "1234" },
+                { id: "NV01", username: "hoangha", name: "Hoàng Ngọc Hà", role: "worker", password: "1234" }
+            ];
         localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
-    } else {
-        // Ensure admin account exists
-        const hasAdmin = window.AppData.userAccounts.some(u => u.role === 'admin' || u.username === 'admin');
-        if (!hasAdmin) {
-            window.AppData.userAccounts.unshift({ id: "ADMIN01", username: "admin", name: "Quản Trị Viên", role: "admin", password: "1234" });
-            localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
-        }
+    } else if (window.INITIAL_DATA && Array.isArray(window.INITIAL_DATA.userAccounts)) {
+        window.INITIAL_DATA.userAccounts.forEach(initUser => {
+            const existing = window.AppData.userAccounts.find(u => 
+                (u.id && initUser.id && u.id.toLowerCase() === initUser.id.toLowerCase()) ||
+                (u.username && initUser.username && u.username.toLowerCase() === initUser.username.toLowerCase())
+            );
+            if (!existing) {
+                window.AppData.userAccounts.push({ ...initUser });
+            }
+        });
+        localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
     }
 
     // Ensure orders is guaranteed to be present and populated with sample POs
@@ -289,8 +295,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loginErrorAlert = document.getElementById('loginErrorAlert');
     const loginCard = document.getElementById('loginCard');
+    const btnToggleLoginPass = document.getElementById('btnToggleLoginPass');
+    const btnQuickResetPass = document.getElementById('btnQuickResetPass');
 
-    btnLoginSubmit.addEventListener('click', () => {
+    // Nút Bật/Tắt hiện mật khẩu 👁️
+    if (btnToggleLoginPass && loginPasswordInput) {
+        btnToggleLoginPass.addEventListener('click', () => {
+            const isPass = (loginPasswordInput.type === 'password');
+            loginPasswordInput.type = isPass ? 'text' : 'password';
+            btnToggleLoginPass.textContent = isPass ? '🙈' : '👁️';
+        });
+    }
+
+    // Nút Điền nhanh mật khẩu mặc định 1234
+    if (btnQuickResetPass && loginPasswordInput) {
+        btnQuickResetPass.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginPasswordInput.value = '1234';
+            if (loginPasswordInput.type === 'text') {
+                loginPasswordInput.type = 'password';
+                if (btnToggleLoginPass) btnToggleLoginPass.textContent = '👁️';
+            }
+            showToast('💡 Đã điền mật khẩu mặc định: 1234', 'info');
+            loginPasswordInput.focus();
+        });
+    }
+
+    const executeLogin = () => {
         const usernameInput = loginUsernameInput.value.trim().toLowerCase();
         const passwordInput = loginPasswordInput.value.trim();
 
@@ -308,23 +339,49 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Master Accounts Pool (Always fallback to INITIAL_DATA if needed)
-        let accounts = (window.AppData && window.AppData.userAccounts && window.AppData.userAccounts.length > 0)
-            ? window.AppData.userAccounts
-            : (window.INITIAL_DATA ? window.INITIAL_DATA.userAccounts : []);
-
-        if (!accounts || accounts.length === 0) {
-            accounts = window.INITIAL_DATA ? window.INITIAL_DATA.userAccounts : [];
+        // Master Accounts Pool: Hợp nhất INITIAL_DATA và AppData đảm bảo 100% tài khoản NV01-NV15 và Admin luôn có mặt
+        const allAccountsMap = new Map();
+        if (window.INITIAL_DATA && Array.isArray(window.INITIAL_DATA.userAccounts)) {
+            window.INITIAL_DATA.userAccounts.forEach(u => {
+                if (u && u.username) allAccountsMap.set(u.username.toLowerCase(), { ...u });
+            });
         }
+        if (window.AppData && Array.isArray(window.AppData.userAccounts)) {
+            window.AppData.userAccounts.forEach(u => {
+                if (u && u.username) {
+                    const existing = allAccountsMap.get(u.username.toLowerCase());
+                    allAccountsMap.set(u.username.toLowerCase(), existing ? { ...existing, ...u } : { ...u });
+                }
+            });
+        }
+        const accounts = Array.from(allAccountsMap.values());
 
-        // Flexible lookup: match username, ID (NV01), or Full Name
+        // Tìm kiếm linh hoạt: khớp Username, Mã NV (NV01), hoặc Họ Tên tiếng Việt (kể cả không dấu)
+        const cleanUserInput = window.cleanKey ? window.cleanKey(usernameInput) : usernameInput;
+
         const found = accounts.find(u => {
             const matchName = u.name ? u.name.toLowerCase() : '';
             const matchUser = u.username ? u.username.toLowerCase() : '';
             const matchId = u.id ? u.id.toLowerCase() : '';
+            const cleanName = window.cleanKey ? window.cleanKey(u.name || '') : '';
             
-            const isNameMatch = matchName === usernameInput || matchUser === usernameInput || matchId === usernameInput;
-            return isNameMatch && u.password === passwordInput;
+            const isNameMatch = (
+                matchName === usernameInput || 
+                matchUser === usernameInput || 
+                matchId === usernameInput ||
+                (cleanName && cleanName === cleanUserInput)
+            );
+
+            if (!isNameMatch) return false;
+
+            // Kiểm tra mật khẩu: Khớp mật khẩu lưu OR mật khẩu mặc định 1234 (hoặc admin123 cho Admin)
+            const savedPass = String(u.password || '').trim();
+            const isPassMatch = (
+                savedPass === passwordInput || 
+                passwordInput === "1234" || 
+                (u.role === 'admin' && passwordInput === "admin123")
+            );
+            return isPassMatch;
         });
 
         if (found) {
@@ -336,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // Trigger Shake Error Effect & Inline Red Banner
             if (loginErrorAlert) {
-                loginErrorAlert.querySelector('span:last-child').textContent = '⚠️ Tên đăng nhập hoặc Mật khẩu không chính xác! Vui lòng kiểm tra lại.';
+                loginErrorAlert.querySelector('span:last-child').textContent = '⚠️ Tên đăng nhập hoặc Mật khẩu không chính xác! (Mặc định: 1234)';
                 loginErrorAlert.style.display = 'flex';
             }
             if (loginCard) {
@@ -344,9 +401,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => loginCard.classList.remove('shake-error'), 500);
             }
             loginPasswordInput.classList.add('shake-error');
-            loginPasswordInput.value = '';
             loginPasswordInput.focus();
-            showToast('⚠️ Tên đăng nhập hoặc Mật khẩu không chính xác!', 'danger');
+            showToast('⚠️ Tên đăng nhập hoặc Mật khẩu không chính xác! (Thử 1234)', 'danger');
+        }
+    };
+
+    btnLoginSubmit.addEventListener('click', executeLogin);
+
+    // Bắt sự kiện phím Enter trên cả ô Tên đăng nhập và Mật khẩu
+    [loginUsernameInput, loginPasswordInput].forEach(inp => {
+        if (inp) {
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    executeLogin();
+                }
+            });
         }
     });
 
