@@ -1163,6 +1163,97 @@ document.addEventListener('DOMContentLoaded', () => {
         errorResponsibilitySelect.addEventListener('change', updateWageCalculations);
     }
 
+    
+    // --- 5. LOGIC ĐIỀU KHIỂN ĐĂNG KÝ TĂNG CA (GIẢI PHÁP 1) ---
+    const hasOvertimeCheck = document.getElementById('hasOvertimeCheck');
+    const overtimeDetailsBox = document.getElementById('overtimeDetailsBox');
+    const overtimeHoursInput = document.getElementById('overtimeHoursInput');
+    const overtimeReasonInput = document.getElementById('overtimeReasonInput');
+    const overtimeMealTag = document.getElementById('overtimeMealTag');
+    const btnMinusOt = document.getElementById('btnMinusOt');
+    const btnPlusOt = document.getElementById('btnPlusOt');
+    const otPills = document.querySelectorAll('.ot-pill');
+
+    function updateOvertimeMealDisplay(hrs) {
+        if (!overtimeMealTag) return;
+        if (hrs >= 1.5) {
+            overtimeMealTag.textContent = '+15.000 đ cơm tăng ca';
+            overtimeMealTag.style.background = 'rgba(5, 150, 105, 0.2)';
+            overtimeMealTag.style.color = '#34d399';
+        } else {
+            overtimeMealTag.textContent = 'Tăng ca ngắn (không ăn ca)';
+            overtimeMealTag.style.background = 'rgba(100, 116, 139, 0.2)';
+            overtimeMealTag.style.color = '#94a3b8';
+        }
+    }
+
+    if (hasOvertimeCheck && overtimeDetailsBox) {
+        hasOvertimeCheck.addEventListener('change', () => {
+            if (hasOvertimeCheck.checked) {
+                overtimeDetailsBox.style.display = 'block';
+                const curVal = parseFloat(overtimeHoursInput ? overtimeHoursInput.value : '2.0') || 2.0;
+                updateOvertimeMealDisplay(curVal);
+            } else {
+                overtimeDetailsBox.style.display = 'none';
+            }
+        });
+    }
+
+    otPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            otPills.forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            const hrs = parseFloat(pill.getAttribute('data-ot')) || 2.0;
+            if (overtimeHoursInput) overtimeHoursInput.value = hrs.toFixed(1);
+            updateOvertimeMealDisplay(hrs);
+        });
+    });
+
+    if (btnMinusOt && overtimeHoursInput) {
+        btnMinusOt.addEventListener('click', () => {
+            let val = parseFloat(overtimeHoursInput.value) || 2.0;
+            val = Math.max(0.5, val - 0.5);
+            overtimeHoursInput.value = val.toFixed(1);
+            syncOtPills(val);
+            updateOvertimeMealDisplay(val);
+        });
+    }
+
+    if (btnPlusOt && overtimeHoursInput) {
+        btnPlusOt.addEventListener('click', () => {
+            let val = parseFloat(overtimeHoursInput.value) || 2.0;
+            val = Math.min(4.0, val + 0.5);
+            overtimeHoursInput.value = val.toFixed(1);
+            syncOtPills(val);
+            updateOvertimeMealDisplay(val);
+        });
+    }
+
+    if (overtimeHoursInput) {
+        overtimeHoursInput.addEventListener('input', () => {
+            let val = parseFloat(overtimeHoursInput.value) || 0;
+            if (val > 4.0) {
+                val = 4.0;
+                overtimeHoursInput.value = '4.0';
+                if (typeof showToast === 'function') {
+                    showToast('⚠️ Tăng ca tối đa 4h/ngày theo luật lao động và quy chế xưởng!', 'warning');
+                }
+            }
+            syncOtPills(val);
+            updateOvertimeMealDisplay(val);
+        });
+    }
+
+    function syncOtPills(hrs) {
+        otPills.forEach(p => {
+            if (parseFloat(p.getAttribute('data-ot')) === hrs) {
+                p.classList.add('active');
+            } else {
+                p.classList.remove('active');
+            }
+        });
+    }
+
     btnSubmitLog.addEventListener('click', () => {
         if (!currentUser) {
             showToast('⚠️ Vui lòng đăng nhập trước khi báo sản lượng!', 'danger');
@@ -1266,6 +1357,10 @@ document.addEventListener('DOMContentLoaded', () => {
             po: selectedPO,
             date: reportDate,
             shift: shiftVal,
+            has_overtime: (document.getElementById('hasOvertimeCheck') && document.getElementById('hasOvertimeCheck').checked) ? true : false,
+            overtime_hours: (document.getElementById('hasOvertimeCheck') && document.getElementById('hasOvertimeCheck').checked) ? (parseFloat(document.getElementById('overtimeHoursInput').value) || 0) : 0,
+            overtime_reason: (document.getElementById('hasOvertimeCheck') && document.getElementById('hasOvertimeCheck').checked) ? (document.getElementById('overtimeReasonInput').value.trim() || 'Đảm bảo tiến độ sản xuất') : '',
+
             start_time: startTimeVal,
             end_time: endTimeVal,
             downtime_reason: downtimeReasonVal,
@@ -1379,6 +1474,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (productPhotoPreviewGrid) productPhotoPreviewGrid.innerHTML = '';
         if (photoFileInput) photoFileInput.value = '';
         if (productPhotoFileInput) productPhotoFileInput.value = '';
+
+        // Reset phần Đăng ký Tăng ca về mặc định
+        if (hasOvertimeCheck) hasOvertimeCheck.checked = false;
+        if (overtimeDetailsBox) overtimeDetailsBox.style.display = 'none';
+        if (overtimeHoursInput) overtimeHoursInput.value = '2.0';
+        if (overtimeReasonInput) overtimeReasonInput.value = 'Đảm bảo tiến độ sản xuất';
+        syncOtPills(2.0);
+        updateOvertimeMealDisplay(2.0);
 
         if (downtimePills) downtimePills.forEach(p => p.classList.remove('active'));
         if (isTimerRunning) {

@@ -302,6 +302,57 @@
                 </div>
             </div>
 
+            <!-- Section: Đăng Ký Tăng Ca / Làm Thêm Giờ (Giải Pháp 1) -->
+            <div class="card" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(5, 150, 105, 0.4); border-radius: 12px; padding: 14px; margin-top: 14px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 20px;">⏱️</span>
+                        <div>
+                            <span style="font-weight: 700; font-size: 14px; color: #34d399;">ĐĂNG KÝ TĂNG CA / LÀM THÊM GIỜ</span>
+                            <p style="font-size: 11px; color: var(--text-muted); margin: 0;">Tính tròn từng nửa tiếng (0.5h), tối đa 4h/ngày theo quy định</p>
+                        </div>
+                    </div>
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                        <input type="checkbox" id="hasOvertimeCheck" style="width: 20px; height: 20px; accent-color: #059669; cursor: pointer;">
+                        <span style="font-size: 13px; font-weight: 600; color: #ffffff;" id="hasOvertimeLabel">CÓ TĂNG CA</span>
+                    </label>
+                </div>
+
+                <!-- Overtime Detail Box (Ẩn khi không tăng ca) -->
+                <div id="overtimeDetailsBox" style="display: none; margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.15);">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Chọn nhanh số giờ tăng ca:</span>
+                        <span id="overtimeMealTag" style="font-size: 11px; padding: 2px 8px; border-radius: 6px; background: rgba(5, 150, 105, 0.2); color: #34d399; font-weight: 600;">+15.000 đ cơm tăng ca</span>
+                    </label>
+
+                    <!-- Nút chọn nhanh nửa tiếng -->
+                    <div class="pill-grid" style="grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px;">
+                        <button type="button" class="pill-btn ot-pill" data-ot="0.5">0.5h</button>
+                        <button type="button" class="pill-btn ot-pill" data-ot="1.0">1.0h</button>
+                        <button type="button" class="pill-btn ot-pill" data-ot="1.5">1.5h</button>
+                        <button type="button" class="pill-btn ot-pill active" data-ot="2.0">2.0h (Chuẩn)</button>
+                        <button type="button" class="pill-btn ot-pill" data-ot="2.5">2.5h</button>
+                        <button type="button" class="pill-btn ot-pill" data-ot="3.0">3.0h</button>
+                        <button type="button" class="pill-btn ot-pill" data-ot="3.5">3.5h</button>
+                        <button type="button" class="pill-btn ot-pill" data-ot="4.0">4.0h (Tối đa)</button>
+                    </div>
+
+                    <!-- Ô điều chỉnh tự do với nút +/- -->
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                        <span style="font-size: 13px; color: var(--text-muted); white-space: nowrap;">Hoặc chỉnh số lẻ:</span>
+                        <button type="button" id="btnMinusOt" class="pill-btn" style="width: 42px; height: 38px; font-weight: bold; font-size: 18px; padding: 0;">-</button>
+                        <input type="number" id="overtimeHoursInput" class="form-input" value="2.0" min="0.5" max="4.0" step="0.5" style="text-align: center; font-weight: bold; font-size: 16px; width: 85px; color: #34d399;">
+                        <button type="button" id="btnPlusOt" class="pill-btn" style="width: 42px; height: 38px; font-weight: bold; font-size: 18px; padding: 0;">+</button>
+                        <span style="font-size: 13px; font-weight: 600;">tiếng</span>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Lý do tăng ca (*)</label>
+                        <input type="text" id="overtimeReasonInput" class="form-input" value="Đảm bảo tiến độ sản xuất" placeholder="Lý do tăng ca (Đảm bảo tiến độ sản xuất, giao hàng gấp...)">
+                    </div>
+                </div>
+            </div>
+
             <!-- Incident / Downtime -->
             <div class="form-group" style="margin-top: 14px;">
                 <label class="form-label">Thời gian phát sinh / Dừng máy (Phút)</label>

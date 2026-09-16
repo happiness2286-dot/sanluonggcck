@@ -14,3 +14,7 @@ Thumbs.db
 # IDE settings
 .vscode/
 .idea/
+
+# Scratch & temporary test scripts
+scratch/
+
