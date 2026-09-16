@@ -1384,13 +1384,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        let unitWage = 45000;
-        const key = `${product}___${op}`;
-        if (window.AppData.operationWages && window.AppData.operationWages[key]) {
-            unitWage = window.AppData.operationWages[key];
-        }
-        const totalPieceWage = qtyDat * unitWage;
-
         const reportDate = (reportDateInput && reportDateInput.value) ? reportDateInput.value : getTodayDateString();
 
         const shiftVal = document.getElementById('shiftSelect') ? document.getElementById('shiftSelect').value : 'Ca 1';
