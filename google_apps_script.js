@@ -32,7 +32,7 @@ var SCRAP_FOLDER_ID = "";   // Ví dụ: "9Z8y7X6w5V4u3T..." (Để trống hệ
 
 // 🤖 CẤU HÌNH TELEGRAM BOT TỰ ĐỘNG CẢNH BÁO
 var TELEGRAM_BOT_TOKEN = "8871498341:AAFTzNNaCNXZlaTJlh8znudxrYFs69bu74s";
-var TELEGRAM_CHAT_ID = "5422717407";   // Chat ID Quản Đốc Hoàng Hà (5422717407) hoặc Chat ID nhóm xưởng (-100xxxxxxxxxx)
+var TELEGRAM_CHAT_ID = "-5457065729";   // Chat ID nhóm xưởng GCCK_VICO (-5457065729) và Quản Đốc Hoàng Hà (5422717407)
 
 // 🌐 URL Mini App Sản Lượng của bạn (Netlify hoặc GitHub Pages)
 var MINI_APP_URL = "https://happiness2286-dot.github.io/sanluonggcck/";       // Dán link GitHub Pages (ví dụ: "https://ten-ban.github.io/SANLUONG2026/") hoặc Netlify vào đây!
