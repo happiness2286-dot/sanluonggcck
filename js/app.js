@@ -623,7 +623,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.AppData = JSON.parse(JSON.stringify(window.INITIAL_DATA));
                 localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
                 initDropdowns();
-                showToast('🔄 Đã nạp & đồng bộ 100% dữ liệu Sản phẩm & Nguyên công mới nhất!', 'success');
+                showToast('🔄 Đang đồng bộ Master Data từ Google Sheet...', 'info');
+                fetchMasterDataFromCloud();
             }
         });
     }
@@ -2675,12 +2676,27 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
                             isUpdated = true;
                         } else {
                             cloudData.operationsByProduct[prod].forEach(opItem => {
-                                const exists = window.AppData.operationsByProduct[prod].find(o => o.op === opItem.op);
-                                if (!exists) {
+                                const opName = typeof opItem === 'string' ? opItem : (opItem ? opItem.op : '');
+                                const opClean = window.cleanKey(opName);
+                                const exists = window.AppData.operationsByProduct[prod].find(o => {
+                                    const existingName = typeof o === 'string' ? o : (o ? o.op : '');
+                                    return window.cleanKey(existingName) === opClean;
+                                });
+                                if (!exists && opName) {
                                     window.AppData.operationsByProduct[prod].push(opItem);
                                     isUpdated = true;
                                 }
                             });
+                        }
+                    });
+                }
+
+                if (cloudData.machines && Array.isArray(cloudData.machines)) {
+                    if (!window.AppData.machines) window.AppData.machines = [];
+                    cloudData.machines.forEach(m => {
+                        if (!window.AppData.machines.includes(m)) {
+                            window.AppData.machines.push(m);
+                            isUpdated = true;
                         }
                     });
                 }
@@ -2693,7 +2709,7 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
                 if (isUpdated) {
                     localStorage.setItem('GCCK_APP_DATA', JSON.stringify(window.AppData));
                     initDropdowns();
-                    showToast('🔄 Tự động cập nhật Sản phẩm & Nguyên công mới từ Admin!', 'info');
+                    showToast('🔄 Đã cập nhật Sản phẩm & Công đoạn mới nhất từ Google Sheet!', 'success');
                 }
             }
         })

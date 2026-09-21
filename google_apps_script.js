@@ -61,24 +61,174 @@ function getSpreadsheet() {
 function doGet(e) {
   try {
     var ss = getSpreadsheet();
-    var masterSheet = ss.getSheetByName("Danh Mục Master");
+    // 1. Tự động nhận diện Sheet Master Data theo mọi cách đặt tên (ưu tiên bảng của Quản Đốc)
+    var masterSheet = ss.getSheetByName("Danh Mục Master Data") || 
+                      ss.getSheetByName("Danh Mục Master") || 
+                      ss.getSheetByName("MasterData") ||
+                      ss.getSheetByName("DanhMucMaster");
+
     if (!masterSheet) {
       return ContentService.createTextOutput(JSON.stringify({
         "result": "empty",
-        "message": "Chưa có Master Data trên Cloud"
+        "message": "Chưa có Sheet 'Danh Mục Master Data' trên Google Sheet"
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    var cellVal = masterSheet.getRange("A2").getValue();
-    if (!cellVal) {
+    var lastRow = masterSheet.getLastRow();
+    var lastCol = masterSheet.getLastColumn();
+
+    if (lastRow < 2) {
       return ContentService.createTextOutput(JSON.stringify({
-        "result": "empty"
+        "result": "empty",
+        "message": "Sheet Danh Mục Master Data chưa có dữ liệu dòng"
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    var masterData = JSON.parse(cellVal);
+    var cellA2 = String(masterSheet.getRange("A2").getValue() || "").trim();
+    
+    // TRƯỜNG HỢP 1: Ô A2 chứa chuỗi JSON (bản cũ được lưu từ nút bấm Admin của Mini App)
+    if (cellA2.indexOf("{") === 0 && cellA2.indexOf("customers") >= 0) {
+      try {
+        var jsonMasterData = JSON.parse(cellA2);
+        return ContentService.createTextOutput(JSON.stringify({
+          "result": "success",
+          "masterData": jsonMasterData
+        })).setMimeType(ContentService.MimeType.JSON);
+      } catch (eJson) {
+        console.log("Không parse được JSON từ A2, chuyển sang đọc tự động dạng bảng: " + eJson.toString());
+      }
+    }
+
+    // TRƯỜNG HỢP 2: Đọc thông minh theo bảng cột chuyên nghiệp của Quản Đốc
+    // (Cột A: Khách Hàng, B: Mã/Tên SP, C: Công Đoạn, D: Thời Gian Định Mức, E: Máy Gia Công)
+    var numColsToRead = Math.max(lastCol, 5);
+    var allData = masterSheet.getRange(1, 1, lastRow, numColsToRead).getValues();
+
+    var customersSet = [];
+    var productsByCustomer = {};
+    var operationsByProduct = {};
+    var operationWages = {};
+    var machinesSet = [];
+
+    // Quét dòng tiêu đề (Dòng 1) để nhận diện đúng vị trí cột tự động (dù đổi thứ tự cột vẫn nhận diện đúng)
+    var colIdxCust = 0;   // Khách hàng
+    var colIdxProd = 1;   // Sản phẩm
+    var colIdxOp = 2;     // Công đoạn / Nguyên công
+    var colIdxTime = 3;   // Thời gian định mức (s)
+    var colIdxMachine = 4;// Máy gia công
+    var colIdxWage = -1;  // Đơn giá khoán (nếu có)
+
+    var headerRow = allData[0];
+    for (var h = 0; h < headerRow.length; h++) {
+      var hText = String(headerRow[h] || "").trim().toLowerCase();
+      if (hText.indexOf("khách") >= 0) colIdxCust = h;
+      else if (hText.indexOf("sản phẩm") >= 0 || hText.indexOf("mã sp") >= 0) colIdxProd = h;
+      else if (hText.indexOf("công đoạn") >= 0 || hText.indexOf("nguyên công") >= 0 || hText === "nc") colIdxOp = h;
+      else if (hText.indexOf("thời gian") >= 0 || hText.indexOf("định mức") >= 0 || hText.indexOf("time") >= 0) colIdxTime = h;
+      else if (hText.indexOf("máy") >= 0) colIdxMachine = h;
+      else if (hText.indexOf("đơn giá") >= 0 || hText.indexOf("tiền") >= 0 || hText.indexOf("lương") >= 0) colIdxWage = h;
+    }
+
+    // Duyệt từng dòng dữ liệu từ dòng 2 (Index 1)
+    for (var r = 1; r < allData.length; r++) {
+      var row = allData[r];
+      var cust = String(row[colIdxCust] || "").trim();
+      var prod = String(row[colIdxProd] || "").trim();
+      var op = String(row[colIdxOp] || "").trim();
+      
+      // Đọc thời gian định mức (s)
+      var rawTime = row[colIdxTime];
+      var time_s = 1800; // Mặc định 1800s (30 phút)
+      if (typeof rawTime === "number" && !isNaN(rawTime) && rawTime > 0) {
+        time_s = Math.round(rawTime);
+      } else if (rawTime) {
+        var cleanTimeStr = String(rawTime).replace(/\./g, "").replace(/,/g, ".").replace(/[^0-9.]/g, "");
+        var parsedTime = parseFloat(cleanTimeStr);
+        if (!isNaN(parsedTime) && parsedTime > 0) time_s = Math.round(parsedTime);
+      }
+
+      var machine = (colIdxMachine >= 0 && row[colIdxMachine]) ? String(row[colIdxMachine]).trim() : "";
+      var wage = (colIdxWage >= 0 && row[colIdxWage]) ? Number(row[colIdxWage]) : 0;
+
+      if (!prod && !op) continue; // Bỏ qua dòng trống
+
+      // 1. Gom danh sách Khách hàng
+      if (cust && customersSet.indexOf(cust) === -1) {
+        customersSet.push(cust);
+      }
+
+      // 2. Gom Sản phẩm theo Khách hàng
+      if (cust && prod) {
+        if (!productsByCustomer[cust]) productsByCustomer[cust] = [];
+        if (productsByCustomer[cust].indexOf(prod) === -1) {
+          productsByCustomer[cust].push(prod);
+        }
+      }
+
+      // 3. Gom Công đoạn / Nguyên công theo Sản phẩm
+      if (prod && op) {
+        if (!operationsByProduct[prod]) operationsByProduct[prod] = [];
+        
+        var opExists = operationsByProduct[prod].some(function(item) {
+          var existingName = typeof item === "string" ? item : (item ? item.op : "");
+          return existingName.trim().toLowerCase() === op.trim().toLowerCase();
+        });
+
+        if (!opExists) {
+          operationsByProduct[prod].push({
+            op: op,
+            time_s: time_s,
+            machine: machine
+          });
+        }
+
+        // Đơn giá khoán (nếu có cột đơn giá)
+        if (wage > 0) {
+          operationWages[prod + "___" + op] = wage;
+        }
+      }
+
+      // 4. Gom danh sách Máy gia công
+      if (machine && machinesSet.indexOf(machine) === -1) {
+        machinesSet.push(machine);
+      }
+    }
+
+    // Đọc danh sách Công nhân từ Sheet "Danh Sách Công Nhân" (nếu có)
+    var userAccounts = [];
+    var workerSheet = ss.getSheetByName("Danh Sách Công Nhân") || ss.getSheetByName("CongNhan");
+    if (workerSheet && workerSheet.getLastRow() >= 2) {
+      var wData = workerSheet.getDataRange().getValues();
+      for (var w = 1; w < wData.length; w++) {
+        var wName = String(wData[w][0] || "").trim();
+        var wCode = String(wData[w][1] || "").trim();
+        if (wName && wName !== "Họ Và Tên Công Nhân") {
+          userAccounts.push({
+            id: wCode || ("NV" + (w < 10 ? "0" + w : w)),
+            username: (wCode || wName).toLowerCase().replace(/\s+/g, ""),
+            name: wName,
+            role: "worker",
+            password: "1234",
+            dept: "Tổ GCCK"
+          });
+        }
+      }
+    }
+
+    var masterData = {
+      customers: customersSet,
+      productsByCustomer: productsByCustomer,
+      operationsByProduct: operationsByProduct,
+      operationWages: operationWages,
+      machines: machinesSet,
+      userAccounts: userAccounts.length > 0 ? userAccounts : undefined
+    };
+
     return ContentService.createTextOutput(JSON.stringify({
       "result": "success",
+      "source": "sheet_table",
+      "sheetName": masterSheet.getName(),
+      "totalProducts": Object.keys(operationsByProduct).length,
       "masterData": masterData
     })).setMimeType(ContentService.MimeType.JSON);
 
@@ -123,7 +273,7 @@ function doPost(e) {
 
         if (currentData.length <= 1) {
           wSheet.clear();
-          wSheet.appendRow(["Họ Và Tên Công Nhân", "Tài Khoản / Mã", "Trạng Thái"]);
+          wSheet.appendRow(["Họ Và Tên Công Nhân", "Tài Khoản / Mã", "Trạng Thái", "Telegram Chat ID", "Username Telegram"]);
         } else {
           for (var r = 1; r < currentData.length; r++) {
             if (currentData[r][0]) existingNames.add(String(currentData[r][0]).trim());
@@ -534,20 +684,20 @@ function checkOverdueReports(shiftName) {
     // Danh sách 15 công nhân mặc định từ cơ sở dữ liệu gốc của dự án
     var DEFAULT_WORKERS = [
       { name: "Hoàng Ngọc Hà", code: "NV01", chatId: "5422717407", user: "hoangha" },
-      { name: "Nguyễn Trung Đông", code: "NV02", chatId: "", user: "trungdong" },
+      { name: "Nguyễn Trung Đông", code: "NV02", chatId: "7154329103", user: "trungdong" },
       { name: "Phùng Đình Hùng", code: "NV03", chatId: "", user: "dinhhung" },
       { name: "Vũ Tiến Thuận", code: "NV04", chatId: "", user: "tienthuan" },
       { name: "Nguyễn Mạnh Hà", code: "NV05", chatId: "", user: "manhha" },
       { name: "Nguyễn Văn Thanh", code: "NV06", chatId: "", user: "vanthanh" },
-      { name: "Phùng Gia Phúc", code: "NV07", chatId: "", user: "giaphuc" },
-      { name: "Trần Văn Dũng", code: "NV08", chatId: "", user: "vandung" },
+      { name: "Phùng Gia Phúc", code: "NV07", chatId: "8852796611", user: "giaphuc" },
+      { name: "Trần Văn Dũng", code: "NV08", chatId: "8405571371", user: "vandung" },
       { name: "Trần Đăng Ninh", code: "NV09", chatId: "", user: "dangninh" },
       { name: "Phạm Văn Tráng", code: "NV10", chatId: "", user: "vantrang" },
-      { name: "Phùng Công Thắng", code: "NV11", chatId: "", user: "congthang" },
-      { name: "Phạm Ngọc Sam", code: "NV12", chatId: "", user: "ngocsam" },
-      { name: "Trần Văn Quỳnh", code: "NV13", chatId: "", user: "vanquynh" },
-      { name: "Đinh Văn Nhận", code: "NV14", chatId: "", user: "vannhan" },
-      { name: "Đặng Ngọc Long", code: "NV15", chatId: "", user: "ngoclong" }
+      { name: "Phùng Công Thắng", code: "NV11", chatId: "8906721112", user: "congthang" },
+      { name: "Phạm Ngọc Sam", code: "NV12", chatId: "8836472092", user: "ngocsam" },
+      { name: "Trần Văn Quỳnh", code: "NV13", chatId: "7090612444", user: "vanquynh" },
+      { name: "Đinh Văn Nhận", code: "NV14", chatId: "8799424202", user: "vannhan" },
+      { name: "Đặng Ngọc Long", code: "NV15", chatId: "8883746026", user: "ngoclong" }
     ];
 
     // Đọc danh sách Công nhân từ Sheet "Danh Sách Công Nhân"
@@ -706,6 +856,19 @@ function dongBoLienKetTelegramTho() {
   var data = wSheet.getDataRange().getValues();
   if (data.length <= 1) return { success: false, message: "Sheet chưa có dữ liệu thợ" };
 
+  // Danh sách công nhân chuẩn kèm Chat ID đã xác minh
+  var KNOWN_WORKERS = [
+    { name: "Hoàng Ngọc Hà", code: "NV01", chatId: "5422717407", user: "Quản Đốc Hoàng Hà" },
+    { name: "Nguyễn Trung Đông", code: "NV02", chatId: "7154329103", user: "trungdong" },
+    { name: "Phùng Gia Phúc", code: "NV07", chatId: "8852796611", user: "giaphuc" },
+    { name: "Trần Văn Dũng", code: "NV08", chatId: "8405571371", user: "vandung" },
+    { name: "Phùng Công Thắng", code: "NV11", chatId: "8906721112", user: "congthang" },
+    { name: "Phạm Ngọc Sam", code: "NV12", chatId: "8836472092", user: "ngocsam" },
+    { name: "Trần Văn Quỳnh", code: "NV13", chatId: "7090612444", user: "vanquynh" },
+    { name: "Đinh Văn Nhận", code: "NV14", chatId: "8799424202", user: "vannhan" },
+    { name: "Đặng Ngọc Long", code: "NV15", chatId: "8883746026", user: "ngoclong" }
+  ];
+
   // Tạo map tra cứu theo Mã nhân viên (NV01, NV02,...) và Tên Đăng Nhập
   var workerMap = {}; // key -> rowIndex (1-based)
   for (var r = 1; r < data.length; r++) {
@@ -721,14 +884,17 @@ function dongBoLienKetTelegramTho() {
     }
   }
 
-  // Đảm bảo Hoàng Ngọc Hà luôn có ID 5422717407
-  if (workerMap["NV01"]) {
-    var curHaId = String(wSheet.getRange(workerMap["NV01"], 4).getValue() || "").trim();
-    if (!curHaId) {
-      wSheet.getRange(workerMap["NV01"], 4).setValue("5422717407");
-      wSheet.getRange(workerMap["NV01"], 5).setValue("Quản Đốc Hoàng Hà");
+  // Tự động điền các Chat ID đã biết vào Sheet nếu đang trống
+  KNOWN_WORKERS.forEach(function (kw) {
+    var targetRow = workerMap[kw.code];
+    if (targetRow) {
+      var curVal = String(wSheet.getRange(targetRow, 4).getValue() || "").trim();
+      if (!curVal) {
+        wSheet.getRange(targetRow, 4).setValue(kw.chatId);
+        wSheet.getRange(targetRow, 5).setValue(kw.user);
+      }
     }
-  }
+  });
 
   // Quét getUpdates từ Telegram API
   var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/getUpdates";
@@ -737,17 +903,22 @@ function dongBoLienKetTelegramTho() {
 
   var linkedCount = 0;
   var newlyLinked = [];
+  var maxUpdateId = 0;
 
   if (json.ok && json.result && Array.isArray(json.result)) {
     var updates = json.result;
     for (var u = 0; u < updates.length; u++) {
-      var msg = updates[u].message;
+      var item = updates[u];
+      if (item.update_id && item.update_id > maxUpdateId) {
+        maxUpdateId = item.update_id;
+      }
+      var msg = item.message;
       if (!msg || !msg.text) continue;
 
       var text = String(msg.text).trim();
       var from = msg.from || {};
       var chatId = String(msg.chat.id);
-      var username = from.username ? ("@" + from.username) : (from.first_name || "");
+      var username = from.username ? ("@" + from.username) : ((from.first_name || "") + " " + (from.last_name || "")).trim();
 
       // Bỏ qua nếu là tin nhắn trong nhóm (chatId âm)
       if (chatId.indexOf("-") === 0) continue;
@@ -763,6 +934,19 @@ function dongBoLienKetTelegramTho() {
         matchedCode = text.trim().toUpperCase();
       }
 
+      // Nhận diện thông minh nếu thợ chỉ bấm /start trần không kèm mã
+      if (!matchedCode && (from.first_name || from.last_name)) {
+        var senderName = ((from.first_name || "") + " " + (from.last_name || "")).toLowerCase();
+        var cleanSender = senderName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().replace(/[^a-z0-9]/g, "");
+        for (var k in workerMap) {
+          if (k.indexOf("nv") === 0) continue;
+          if (cleanSender.indexOf(k) >= 0 || k.indexOf(cleanSender) >= 0) {
+            matchedCode = k;
+            break;
+          }
+        }
+      }
+
       var targetRow = workerMap[matchedCode] || workerMap[matchedCode.toLowerCase()];
       if (targetRow) {
         var currentChatId = String(wSheet.getRange(targetRow, 4).getValue() || "").trim();
@@ -771,19 +955,34 @@ function dongBoLienKetTelegramTho() {
           wSheet.getRange(targetRow, 5).setValue(username);
           linkedCount++;
           var wFullName = wSheet.getRange(targetRow, 1).getValue();
+          var wCode = wSheet.getRange(targetRow, 2).getValue();
           newlyLinked.push(wFullName + " (" + chatId + ")");
 
           // Gửi tin nhắn chào mừng và xác nhận 1-1 cho công nhân
           var welcomeMsg = "✅ <b>LIÊN KẾT TÀI KHOẢN THÀNH CÔNG!</b>\n" +
             "--------------------------------------\n" +
-            "👋 Xin chào anh <b>" + wFullName + "</b> (" + matchedCode + ")!\n" +
+            "👋 Xin chào anh <b>" + wFullName + "</b> (" + wCode + ")!\n" +
             "Tài khoản Telegram của anh đã được liên kết với <b>Hệ Thống Quản Lý Sản Lượng GCCK VICO 2026</b>.\n\n" +
             "🔔 <i>Bot sẽ tự động nhắc nhở nộp sản lượng ca và gửi thông tin lương khoán trực tiếp đến anh tại đây.</i>\n\n" +
             "👉 Mini App: " + MINI_APP_URL.trim();
 
           sendSingleTelegramMessage(chatId, welcomeMsg);
+
+          // Thông báo cho Quản Đốc Hoàng Hà
+          var adminNotice = "🔔 <b>THỢ LIÊN KẾT TELEGRAM THÀNH CÔNG:</b>\n" +
+            "• Công nhân: <b>" + wFullName + "</b> (" + wCode + ")\n" +
+            "• Chat ID: <code>" + chatId + "</code>\n" +
+            "• Username: " + username;
+          sendSingleTelegramMessage("5422717407", adminNotice);
         }
       }
+    }
+
+    // Xóa hàng đợi Telegram đã xử lý để không bị lặp
+    if (maxUpdateId > 0) {
+      try {
+        UrlFetchApp.fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN.trim() + "/getUpdates?offset=" + (maxUpdateId + 1), { muteHttpExceptions: true });
+      } catch (eOff) {}
     }
   }
 
@@ -4764,9 +4963,9 @@ function phucHoiHaiTrangTinhMasterVaCongNhan() {
                 .setBorder(true, true, true, true, true, true, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID);
       }
       
-      // ĐẶT DÒNG TIÊU ĐỀ CHUẨN DUY NHẤT TẠI DÒNG 1 (XANH NGỌC LỤC BẢO #059669)
-      var wHeaders = [["Họ Và Tên Công Nhân", "Bộ Phận / Máy", "Trạng Thái"]];
-      wSheet.getRange(1, 1, 1, 3).setValues(wHeaders)
+      // ĐẶT DÒNG TIÊU ĐỀ CHUẨN DUY NHẤT TẠI DÒNG 1 (XANH NGỌC LỤC BẢO #059669) - 5 CỘT CHUẨN
+      var wHeaders = [["Họ Và Tên Công Nhân", "Tài Khoản / Mã", "Trạng Thái", "Telegram Chat ID", "Username Telegram"]];
+      wSheet.getRange(1, 1, 1, 5).setValues(wHeaders)
             .setFontFamily("Roboto")
             .setFontWeight("bold")
             .setFontSize(10.5)
@@ -4777,12 +4976,12 @@ function phucHoiHaiTrangTinhMasterVaCongNhan() {
       wSheet.setRowHeight(1, 34);
       wSheet.setFrozenRows(1); // ĐÓNG BĂNG DUY NHẤT DÒNG 1 TIÊU ĐỀ
       
-      // ĐỊNH DẠNG TẤT CẢ DÒNG DỮ LIỆU CÔNG NHÂN (DÒNG 2 TRỞ ĐI) - TUYỆT ĐỐI KHÔNG BỊ IN NGHIÊNG, KHÔNG BỊ BÔI XANH
+      // ĐỊNH DẠNG TẤT CẢ DÒNG DỮ LIỆU CÔNG NHÂN (DÒNG 2 TRỞ ĐI)
       if (lastRow >= 2) {
         for (var r = 2; r <= lastRow; r++) {
           wSheet.setRowHeight(r, 26);
           var rowBg = (r % 2 === 0) ? "#ffffff" : "#f8fafc";
-          wSheet.getRange(r, 1, 1, lastCol)
+          wSheet.getRange(r, 1, 1, Math.max(5, lastCol))
                 .setBackground(rowBg)
                 .setFontSize(10)
                 .setFontStyle("normal")
@@ -4792,12 +4991,15 @@ function phucHoiHaiTrangTinhMasterVaCongNhan() {
         wSheet.getRange(2, 1, lastRow - 1, 1).setHorizontalAlignment("left");
         wSheet.getRange(2, 2, lastRow - 1, 1).setHorizontalAlignment("center");
         wSheet.getRange(2, 3, lastRow - 1, 1).setHorizontalAlignment("center").setFontWeight("bold");
+        wSheet.getRange(2, 4, lastRow - 1, 2).setHorizontalAlignment("center");
       }
       
-      // Thiết lập độ rộng cột chuẩn mắt
-      wSheet.setColumnWidth(1, 240);
-      wSheet.setColumnWidth(2, 140);
-      wSheet.setColumnWidth(3, 130);
+      // Thiết lập độ rộng 5 cột chuẩn mắt
+      wSheet.setColumnWidth(1, 220);
+      wSheet.setColumnWidth(2, 130);
+      wSheet.setColumnWidth(3, 120);
+      wSheet.setColumnWidth(4, 150);
+      wSheet.setColumnWidth(5, 160);
       
       Logger.log("✅ Đã phục hồi hoàn hảo dòng tiêu đề cho Sheet: " + sName);
     } catch (eW) {

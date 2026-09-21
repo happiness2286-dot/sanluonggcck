@@ -4539,6 +4539,18 @@ window.INITIAL_DATA = {
             "op": "G/c Roa lỗ phi 32/2 lỗ",
             "time_s": 1687,
             "stage": "End"
+        },
+        {
+            "op": "G/c Nc6 phay rãnh 1",
+            "time_s": 4800,
+            "machine": "Máy Phay CNC1",
+            "stage": "NC6"
+        },
+        {
+            "op": "G/c Nc7 phay rãnh 2",
+            "time_s": 4800,
+            "machine": "Máy Phay CNC2",
+            "stage": "NC7"
         }
     ],
     "Sealing strip, above": [
@@ -4566,6 +4578,18 @@ window.INITIAL_DATA = {
             "op": "G/c doa lỗ phi 32",
             "time_s": 1687,
             "stage": "End"
+        },
+        {
+            "op": "G/c Nc6 phay rãnh 1",
+            "time_s": 4800,
+            "machine": "Máy Phay CNC1",
+            "stage": "NC6"
+        },
+        {
+            "op": "G/c Nc7 phay rãnh 2",
+            "time_s": 4800,
+            "machine": "Máy Phay CNC2",
+            "stage": "NC7"
         }
     ]
 },
@@ -6165,18 +6189,22 @@ window.INITIAL_DATA.operationWages = {
     "High-temperature nozzle NC 500-0o___G/c khoan hoàn thiện": 27900,
     "High-temperature nozzle NC Φ138/568___G/c phay mp hoàn thiện": 55800,
     "High-temperature nozzle NC Φ138/568___G/c khoan hoàn thiện": 27900,
-    "Sealing trip, below___G/c phay Mp NC1 Kt 47mm": 37200,
-    "Sealing trip, below___G/c phay Mp NC2 Kt 95mm": 37200,
-    "Sealing trip, below___G/c phay cạnh NC3 kt 12mm": 19918,
-    "Sealing trip, below___G/c phay Mp NC4 Kt 412mm": 14942,
-    "Sealing trip, below___G/c phay Mp NC4 Kt 412mm còn lại": 14942,
-    "Sealing trip, below___G/c khoan lỗ phi 14/2 lỗ": 26148,
-    "Sealing trip, below___G/c Roa lỗ phi 32/2 lỗ": 26148,
+    "Sealing strip, below___G/c phay Mp NC1 Kt 47mm": 37200,
+    "Sealing strip, below___G/c phay Mp NC2 Kt 95mm": 37200,
+    "Sealing strip, below___G/c phay cạnh NC3 kt 12mm": 19918,
+    "Sealing strip, below___G/c phay Mp NC4 Kt 412mm": 14942,
+    "Sealing strip, below___G/c phay Mp NC4 Kt 412mm còn lại": 14942,
+    "Sealing strip, below___G/c khoan lỗ phi 14/2 lỗ": 26148,
+    "Sealing strip, below___G/c Roa lỗ phi 32/2 lỗ": 26148,
+    "Sealing strip, below___G/c Nc6 phay rãnh 1": 74400,
+    "Sealing strip, below___G/c Nc7 phay rãnh 2": 74400,
     "Sealing strip, above___G/c phay Mp NC1 Kt 95mm": 37200,
     "Sealing strip, above___G/c phay Mp NC2 Kt 412mm": 14942,
     "Sealing strip, above___G/c phay Mp NC3 Kt 412mm còn lại": 14942,
     "Sealing strip, above___G/c khoan lỗ phi 14": 26148,
-    "Sealing strip, above___G/c doa lỗ phi 32": 26148
+    "Sealing strip, above___G/c doa lỗ phi 32": 26148,
+    "Sealing strip, above___G/c Nc6 phay rãnh 1": 74400,
+    "Sealing strip, above___G/c Nc7 phay rãnh 2": 74400
 };
 
 
