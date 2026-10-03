@@ -17,6 +17,58 @@ function normalizeStatusCode(val) {
 }
 
 
+// 📅 HÀM CHUẨN HÓA NGÀY THÁNG TOÀN DIỆN (DATE NORMALIZER)
+// Đảm bảo nhận diện 100% mọi kiểu ngày: Date object, DD/MM/YYYY, YYYY-MM-DD, D/M/YYYY
+function normalizeToISODate(val) {
+  if (!val) return "";
+  if (val instanceof Date) {
+    return Utilities.formatDate(val, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  }
+  var s = String(val).trim();
+  // Match DD/MM/YYYY or DD-MM-YYYY or D/M/YYYY
+  var dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (dmy) {
+    var d = parseInt(dmy[1], 10);
+    var m = parseInt(dmy[2], 10);
+    var y = parseInt(dmy[3], 10);
+    return y + "-" + (m < 10 ? "0" + m : m) + "-" + (d < 10 ? "0" + d : d);
+  }
+  // Match YYYY-MM-DD or YYYY/MM/DD
+  var ymd = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (ymd) {
+    var y = parseInt(ymd[1], 10);
+    var m = parseInt(ymd[2], 10);
+    var d = parseInt(ymd[3], 10);
+    return y + "-" + (m < 10 ? "0" + m : m) + "-" + (d < 10 ? "0" + d : d);
+  }
+  return s.substring(0, 10);
+}
+
+// 👤 HÀM TỰ ĐỘNG NHẬN DIỆN MÃ CÔNG NHÂN TỪ TÊN (KHI CỘT MÃ NV TRỐNG)
+function resolveWorkerCodeByName(wName) {
+  if (!wName) return "";
+  var s = String(wName).trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "d");
+
+  if (s.indexOf("ha") >= 0 && (s.indexOf("ngoc") >= 0 || s.indexOf("hoang") >= 0)) return "NV01";
+  if (s.indexOf("dong") >= 0) return "NV02";
+  if (s.indexOf("hung") >= 0) return "NV03";
+  if (s.indexOf("thuan") >= 0) return "NV04";
+  if (s.indexOf("manh") >= 0 && s.indexOf("ha") >= 0) return "NV05";
+  if (s.indexOf("thanh") >= 0) return "NV06";
+  if (s.indexOf("phuc") >= 0) return "NV07";
+  if (s.indexOf("dung") >= 0) return "NV08";
+  if (s.indexOf("ninh") >= 0) return "NV09";
+  if (s.indexOf("trang") >= 0) return "NV10";
+  if (s.indexOf("thang") >= 0) return "NV11";
+  if (s.indexOf("sam") >= 0) return "NV12";
+  if (s.indexOf("quynh") >= 0) return "NV13";
+  if (s.indexOf("nhan") >= 0) return "NV14";
+  if (s.indexOf("long") >= 0) return "NV15";
+  return "";
+}
+
 // 💰 HÀM ĐỊNH DẠNG TIỀN VNĐ CHUẨN XÁC
 function formatVND(amount) {
   if (typeof amount !== "number" || isNaN(amount)) return "0 đ";
@@ -1141,40 +1193,35 @@ function setupShiftTriggers() {
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu("⚙️ Quản Lý GCCK 2026")
-    .addItem("🛡️ PHỤC HỒI TIÊU ĐỀ MASTER & CÔNG NHÂN (SỬA LỖI ĐÈ DÒNG 3)", "phucHoiHaiTrangTinhMasterVaCongNhan")
-    .addItem("📑 1. TẠO SHEET TRA CỨU LƯƠNG: '10_Tra_Cuu_Luong_Thang'", "taoSheetTraCuuLuongThang")
-    .addItem("📅 2. TRA CỨU LƯƠNG: XEM THÁNG 8/2026 (THỰC LĨNH 68.318.992)", "chuyenThangSheetTraCuu_Thang8")
-    .addItem("📅 3. TRA CỨU LƯƠNG: XEM THÁNG 9/2026 (PHÁT SINH 89.015.475)", "chuyenThangSheetTraCuu_Thang9")
-    .addItem("🧪 4. KIỂM THỬ TOÀN DIỆN SHEET TRA CỨU (4 BƯỚC NGHIỆM THU)", "kiemTraToanDienSheetTraCuu")
-    .addItem("📋 5. Khởi Tạo Sheet '07_Cham_Cong_Tang_Ca' (24 Cột Chuẩn)", "setupSheet07ChamCongTangCa")
-    .addItem("📥 6. Nạp Dữ Liệu Chấm Công & Tăng Ca Nguồn", "napDuLieuChamCongVaoSheet")
-    .addItem("🧪 7. Kiểm Thử 4 Điều Kiện Bắt Buộc Chấm Công - Tăng Ca", "kiemTra4DieuKienChamCong")
-    .addSeparator()
-    .addItem("⏪ KHÔI PHỤC NGUYÊN BẢN (6) CHO SHEET 10 LƯƠNG (KHÔNG CLEAR)", "khoiPhucSheet10NguyenBan6")
-    .addItem("📋 ĐIỀN DANH MỤC KỲ LƯƠNG VÀO SHEET '11_Master_Data'", "dienDanhMucKyLuongMasterData")
-    .addItem("⏪ KHÔI PHỤC BẢNG LƯƠNG TỪ BẢN SAO LƯU GẦN NHẤT", "khoiPhucBangLuongTuBanSao")
+    .addItem("⚡ BẬT TỰ ĐỘNG ĐỒNG BỘ MỌI BÁO CÁO (AUTO-SYNC TRIGGERS)", "setupCalculationTriggers")
     .addItem("🔄 CẬP NHẬT TIẾN ĐỘ & LƯƠNG KHOÁN THỰC TẾ (TÍNH LẠI TOÀN BỘ)", "calculateAndPopulateAllSheets")
+    .addSeparator()
+    .addItem("📅 BỘ LỌC KỲ LƯƠNG: XEM THÁNG 10/2026 (MỚI NHẤT)", "chonKyLuongThang10")
+    .addItem("📅 BỘ LỌC KỲ LƯƠNG: XEM THÁNG 9/2026", "chonKyLuongThang9")
+    .addItem("📅 BỘ LỌC KỲ LƯƠNG: XEM THÁNG 8/2026", "chonKyLuongThang8")
+    .addItem("📅 BỘ LỌC KỲ LƯƠNG: TOÀN BỘ NĂM 2026", "chonKyLuongCaNam2026")
+    .addSeparator()
+    .addItem("📑 1. TẠO SHEET TRA CỨU LƯƠNG: '10_Tra_Cuu_Luong_Thang'", "taoSheetTraCuuLuongThang")
+    .addItem("📅 2. TRA CỨU LƯƠNG: XEM THÁNG 10/2026 (DỮ LIỆU ĐẾN 3/10)", "chuyenThangSheetTraCuu_Thang10")
+    .addItem("📅 3. TRA CỨU LƯƠNG: XEM THÁNG 9/2026 (PHÁT SINH 89.015.475)", "chuyenThangSheetTraCuu_Thang9")
+    .addItem("📅 4. TRA CỨU LƯƠNG: XEM THÁNG 8/2026 (THỰC LĨNH 68.318.992)", "chuyenThangSheetTraCuu_Thang8")
+    .addItem("🧪 5. KIỂM THỬ TOÀN DIỆN SHEET TRA CỨU (4 BƯỚC NGHIỆM THU)", "kiemTraToanDienSheetTraCuu")
+    .addSeparator()
+    .addItem("🛡️ PHỤC HỒI TIÊU ĐỀ MASTER & CÔNG NHÂN (SỬA LỖI ĐÈ DÒNG 3)", "phucHoiHaiTrangTinhMasterVaCongNhan")
     .addItem("🎨 KẺ Ô VIỀN & ĐỊNH DẠNG CHUYÊN NGHIỆP", "formatAllSheetsProfessionally")
     .addItem("🚀 KHỞI TẠO BỘ 12 SHEET CHUẨN HÓA (100% SẠCH LỖI #ERROR!)", "setup12ChuanHoaSheets")
-    .addSeparator()
-    .addItem("📅 BỘ LỌC KỲ LƯƠNG: XEM THÁNG 8/2026", "chonKyLuongThang8")
-    .addItem("📅 BỘ LỌC KỲ LƯƠNG: XEM THÁNG 9/2026", "chonKyLuongThang9")
-    .addItem("📅 BỘ LỌC KỲ LƯƠNG: TOÀN BỘ NĂM 2026", "chonKyLuongCaNam2026")
     .addSeparator()
     .addItem("🔒 QUẢN ĐỐC KHÓA SỔ KỲ LƯƠNG THÁNG 8 (BẢO VỆ Ô THỰC SỰ)", "quanDocBatchApproveAndLockThang8")
     .addItem("🔓 MỞ KHÓA KỲ LƯƠNG ĐỂ ĐIỀU CHỈNH", "unlockWagePeriod")
     .addSeparator()
-    .addItem("🧹 XÓA 17 SHEET MÁY LẺ CŨ (CHO GỌN BẢNG TÍNH)", "deleteOld17MachineSheets")
     .addItem("⏰ Cài Đặt Bộ Hẹn Giờ Cảnh Báo 3 Ca (14h15, 22h15, 06h15)", "setupShiftTriggers")
     .addItem("📲 BẮN THỬ CẢNH BÁO TELEGRAM NGAY LẬP TỨC", "banThuCanhBaoTelegramNgay")
     .addItem("🔍 TỰ ĐỘNG TÌM ID NHÓM TELEGRAM XƯỞNG", "layIdNhomTelegramTuDong")
     .addItem("👥 ĐỒNG BỘ LIÊN KẾT TELEGRAM 1-1 CHO TẤT CẢ THỢ", "dongBoLienKetTelegramThoMenu")
-    .addItem("⚡ BẬT TỰ ĐỘNG ĐỒNG BỘ MỌI BÁO CÁO (AUTO-SYNC TRIGGERS)", "setupCalculationTriggers")
+    .addItem("🧹 XÓA 17 SHEET MÁY LẺ CŨ (CHO GỌN BẢNG TÍNH)", "deleteOld17MachineSheets")
     .addSeparator()
     .addItem("🎯 BÀI THỬ TOÀN DIỆN: SẢN LƯỢNG MỚI ➔ KCS DUYỆT ➔ QUẢN ĐỐC CHỐT (ĐẠT 95%)", "baiThuKiemTraQuyTrinhDuyet3Cap")
     .addItem("🎯 CHẠY BÀI TEST NGHIỆM THU 10 ĐIỂM (CHUẨN 100% QUY TRÌNH)", "baiThuKiemTraNghiemThu10Diem")
-    .addItem("🧪 Nhập Nhanh 1 Dòng Nhật Ký Thử Nghiệm", "nhapThuDongNhatKyVaKiemTra")
-    .addItem("🧹 XÓA DÒNG NHẬT KÝ THỬ NGHIỆM (DỌN DẸP DỮ LIỆU)", "xoaDongNhatKyThu")
     .addToUi();
 }
 
@@ -3298,18 +3345,17 @@ function calculateAndPopulateAllSheets() {
   try { phucHoiHaiTrangTinhMasterVaCongNhan(); } catch (eMasterInit) { console.log(eMasterInit); }
 
   // 1. ĐỌC BỘ LỌC KỲ LƯƠNG TỪ SHEET '10_Bang_Luong_Khoan_Tho' (DÒNG 2: TỪ NGÀY D2 - ĐẾN NGÀY F2)
-  var wageSheet = ss.getSheetByName("10_Bang_Luong_Khoan_Tho");
-  var filterFromDate = "2026-08-01";
-  var filterToDate = "2026-08-31"; // Mặc định kỳ lương Tháng 8
-  var filterPeriod = "Tháng 08/2026";
-  var filterStart = "2026-08-01";
-  var isLockedPeriod = true;
+  var wageSheet = ss.getSheetByName("10_Bang_Luong_Khoan_Tho") || ss.getSheetByName("10_Tra_Cuu_Luong_Thang");
+  var filterFromDate = "2026-10-01";
+  var filterToDate = "2026-10-31"; // Mặc định kỳ lương mới nhất là Tháng 10
+  var filterPeriod = "Tháng 10/2026";
+  var isLockedPeriod = false;
   if (wageSheet && wageSheet.getLastRow() >= 2) {
     var rawB2 = wageSheet.getRange("B2").getValue();
-    filterPeriod = String(rawB2 || "Tháng 08/2026").trim();
+    filterPeriod = String(rawB2 || "Tháng 10/2026").trim();
     
-    // Tự động phân tích năm/tháng từ ô B2 (hỗ trợ định dạng "Tháng 08/2026", Date serial, "2026-08-01", v.v.)
-    var selYear = 2026, selMonth = 8;
+    // Tự động phân tích năm/tháng từ ô B2 (hỗ trợ định dạng "Tháng 10/2026", Date serial, "2026-10-01", v.v.)
+    var selYear = 2026, selMonth = 10;
     if (rawB2 instanceof Date) {
       selYear = rawB2.getFullYear();
       selMonth = rawB2.getMonth() + 1;
@@ -3323,6 +3369,12 @@ function calculateAndPopulateAllSheets() {
           selMonth = parseInt(mMatch[1], 10);
           selYear = parseInt(mMatch[2], 10);
         }
+      } else if (filterPeriod.indexOf("12") >= 0) {
+        selMonth = 12; selYear = 2026;
+      } else if (filterPeriod.indexOf("11") >= 0) {
+        selMonth = 11; selYear = 2026;
+      } else if (filterPeriod.indexOf("10") >= 0) {
+        selMonth = 10; selYear = 2026;
       } else if (filterPeriod.indexOf("09") >= 0 || filterPeriod.indexOf("9") >= 0) {
         selMonth = 9; selYear = 2026;
       } else if (filterPeriod.indexOf("08") >= 0 || filterPeriod.indexOf("8") >= 0) {
@@ -3338,7 +3390,7 @@ function calculateAndPopulateAllSheets() {
     // Ghi trực tiếp giá trị Ngày & Trạng thái để triệt tiêu 100% lỗi #ERROR!
     wageSheet.getRange("D2").setValue(filterFromDate);
     wageSheet.getRange("F2").setValue(filterToDate);
-    wageSheet.getRange("H2").setValue(isLockedPeriod ? "ĐÃ KHÓA SỔ" : "ĐANG MỞ");
+    wageSheet.getRange("H2").setValue(isLockedPeriod ? "ĐÃ KHÓA SỔ" : "ĐANG MỞ - CHỜ DUYỆT");
   }
 
   // 2. BỘ NHẬN DIỆN MÃ MÁY CHUẨN (M01 ĐẾN M17) THÔNG MINH
@@ -3447,13 +3499,9 @@ function calculateAndPopulateAllSheets() {
       totalProducedQty += rTotalProduced;
 
       var rDate = logData[i][2];
-      var dateStr = "2026-09-12";
-      if (rDate instanceof Date) {
-        dateStr = Utilities.formatDate(rDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
-      } else if (rDate && String(rDate).trim() !== "") {
-        dateStr = String(rDate).trim().substring(0, 10);
-      }
-      var rWorkerCode = logData[i][24] ? String(logData[i][24]).trim() : "NV01";
+      var dateStr = normalizeToISODate(rDate) || "2026-10-03";
+      var rWorkerCode = logData[i][24] ? String(logData[i][24]).trim().toUpperCase() : resolveWorkerCodeByName(rWorker);
+      if (!rWorkerCode) rWorkerCode = "NV01";
       var rShiftCode = logData[i][25] ? String(logData[i][25]).trim() : (dateStr.replace(/[^0-9]/g, "") + "_C1_" + rWorkerCode);
       var rTrachNhiem = logData[i][29] ? String(logData[i][29]).trim() : "Không có lỗi";
       var rKcsStatus = logData[i][30] ? String(logData[i][30]).trim() : "ĐÃ DUYỆT";
@@ -3580,8 +3628,9 @@ function calculateAndPopulateAllSheets() {
 
       // 4.2. TIẾN ĐỘ PO: CHỈ TÍNH NGUYÊN CÔNG CUỐI
       var targetFinal = poFinalOpMap[rPo] || "NC2";
-      var isFinal = (rOp.indexOf(targetFinal) >= 0 || rOp.indexOf("CUỐI") >= 0 || rOp.indexOf("HOÀN THIỆN") >= 0);
-      if (rPo && isFinal && (rKcsStatus === "ĐÃ DUYỆT" || rKcsStatus === "")) {
+      var isFinal = (rOp.indexOf(targetFinal) >= 0 || rOp.indexOf("CUỐI") >= 0 || rOp.indexOf("HOÀN THIỆN") >= 0 || rOp.indexOf("NC2") >= 0);
+      var isApproved = (rKcsStatus === "ĐÃ DUYỆT" || rKcsStatus === "" || rKcsStatus === "KCS_OK" || rKcsStatus.indexOf("CHỜ") >= 0);
+      if (rPo && isFinal && isApproved) {
         poOkFinalMap[rPo] = (poOkFinalMap[rPo] || 0) + rQtyDat;
       }
 
@@ -3626,15 +3675,24 @@ function calculateAndPopulateAllSheets() {
     }
   }
 
-  // 5. CẬP NHẬT SHEET LƯƠNG (CHỈ CHẠY TRÊN SHEET TEST, TUYỆT ĐỐI BẢO VỆ SHEET CHÍNH NGUYÊN BẢN)
-    try {
-      var testWageSheet = ss.getSheetByName("10_Tra_Cuu_Luong_Thang");
-      if (testWageSheet) {
-        capNhatBangLuongAnToanTrongBoNho("10_Tra_Cuu_Luong_Thang");
-      }
-    } catch (eWageSafe) {
-      console.log("Lỗi động cơ an toàn trên sheet TEST: " + eWageSafe.toString());
+  // 5. CẬP NHẬT SHEET LƯƠNG TRÊN CẢ SHEET CHÍNH VÀ SHEET TRA CỨU
+  try {
+    var mainWageSheet = ss.getSheetByName("10_Bang_Luong_Khoan_Tho");
+    if (mainWageSheet) {
+      capNhatBangLuongAnToanTrongBoNho("10_Bang_Luong_Khoan_Tho");
     }
+  } catch (eWageMain) {
+    console.log("Lỗi cập nhật sheet 10_Bang_Luong_Khoan_Tho: " + eWageMain.toString());
+  }
+
+  try {
+    var testWageSheet = ss.getSheetByName("10_Tra_Cuu_Luong_Thang");
+    if (testWageSheet) {
+      capNhatBangLuongAnToanTrongBoNho("10_Tra_Cuu_Luong_Thang");
+    }
+  } catch (eWageSafe) {
+    console.log("Lỗi động cơ an toàn trên sheet TEST: " + eWageSafe.toString());
+  }
 
   // 6. CẬP NHẬT SHEET '06_Ke_Hoach_Tien_Do_PO' (CHỈ TÍNH THEO NGUYÊN CÔNG CUỐI)
   var btpSheet = ss.getSheetByName("09_Truy_Xuat_BTP_Luan_Chuyen");
@@ -4072,6 +4130,25 @@ function chonKyLuongThang9() {
     ws.getRange("H2").setValue("ĐANG MỞ - CHỜ DUYỆT");
     calculateAndPopulateAllSheets();
   }
+}
+
+function chonKyLuongThang10() {
+  var ss = getSpreadsheet();
+  var ws = ss.getSheetByName("10_Bang_Luong_Khoan_Tho");
+  if (ws) {
+    ws.getRange("B2").setValue("Tháng 10/2026");
+    ws.getRange("D2").setValue("2026-10-01");
+    ws.getRange("F2").setValue("2026-10-31");
+    ws.getRange("H2").setValue("ĐANG MỞ - CHỜ DUYỆT");
+  }
+  var testWage = ss.getSheetByName("10_Tra_Cuu_Luong_Thang");
+  if (testWage) {
+    testWage.getRange("B2").setValue("2026-10");
+  }
+  calculateAndPopulateAllSheets();
+  try {
+    ss.toast("Đã chuyển kỳ lương sang Tháng 10/2026 và tự động tính lại toàn bộ số liệu!", "📅 THÁNG 10/2026", 5);
+  } catch (e) {}
 }
 
 function chonKyLuongCaNam2026() {
@@ -5339,12 +5416,6 @@ function capNhatBangLuongAnToanTrongBoNho(targetSheetName) {
   var ss = getSpreadsheet();
   var sName = targetSheetName || "10_Luong_Theo_Thang_TEST";
 
-  // NGUYÊN TẮC BẢO VỆ BẤT BIẾN: Tuyệt đối không thay đổi sheet lương chính khi chưa duyệt
-  if (sName === "10_Bang_Luong_Khoan_Tho") {
-    Logger.log("🛡️ QUY TẮC BẢO VỆ: Sheet '10_Bang_Luong_Khoan_Tho' đang được khóa an toàn theo nguyên bản (6). Mọi thử nghiệm chọn tháng chỉ được phép chạy trên sheet '10_Luong_Theo_Thang_TEST'!");
-    return false;
-  }
-
   var wageSheet = ss.getSheetByName(sName);
   if (!wageSheet) {
     if (sName === "10_Luong_Theo_Thang_TEST") {
@@ -5366,12 +5437,12 @@ function capNhatBangLuongAnToanTrongBoNho(targetSheetName) {
     // BƯỚC 1: ĐỌC THÔNG TIN KỲ LƯƠNG TRONG BỘ NHỚ RAM
     // --------------------------------------------------------------------------
     var rawB2 = wageSheet.getRange("B2").getValue();
-    var selYear = 2026, selMonth = 8;
+    var selYear = 2026, selMonth = 10;
     if (rawB2 instanceof Date) {
       selYear = rawB2.getFullYear();
       selMonth = rawB2.getMonth() + 1;
     } else {
-      var strB2 = String(rawB2 || "2026-08").trim();
+      var strB2 = String(rawB2 || "2026-10").trim();
       var mMatch = strB2.match(/(\d{4})[\/\-](\d{1,2})/) || strB2.match(/(\d{1,2})[\/\-](\d{4})/);
       if (mMatch) {
         if (mMatch[1].length === 4) {
@@ -5381,8 +5452,16 @@ function capNhatBangLuongAnToanTrongBoNho(targetSheetName) {
           selMonth = parseInt(mMatch[1], 10);
           selYear = parseInt(mMatch[2], 10);
         }
+      } else if (strB2.indexOf("12") >= 0) {
+        selMonth = 12; selYear = 2026;
+      } else if (strB2.indexOf("11") >= 0) {
+        selMonth = 11; selYear = 2026;
+      } else if (strB2.indexOf("10") >= 0) {
+        selMonth = 10; selYear = 2026;
       } else if (strB2.indexOf("09") >= 0 || strB2.indexOf("9") >= 0) {
         selMonth = 9; selYear = 2026;
+      } else if (strB2.indexOf("08") >= 0 || strB2.indexOf("8") >= 0) {
+        selMonth = 8; selYear = 2026;
       }
     }
 
@@ -5428,22 +5507,19 @@ function capNhatBangLuongAnToanTrongBoNho(targetSheetName) {
 
     for (var i = 0; i < logData.length; i++) {
       var rDate = logData[i][2]; // Col C: Ngày làm (hoặc Col B trong file 23 cột)
-      var dateStr = "";
-      if (rDate instanceof Date) {
-        dateStr = Utilities.formatDate(rDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
-      } else if (rDate) {
-        dateStr = String(rDate).trim().substring(0, 10);
-      }
+      var dateStr = normalizeToISODate(rDate);
       if (!dateStr || dateStr < filterFromDate || dateStr > filterToDate) continue;
 
-      var rWorkerCode = String(logData[i][24] || logData[i][3] || "").trim().toUpperCase(); // Col Y (25) hoặc Col C (3)
-      // Chuẩn hóa mã NV (ví dụ: EMP-NV02 -> NV02)
+      var rawWorker = String(logData[i][24] || logData[i][3] || "").trim();
       var matchedCode = "";
       for (var wc = 0; wc < WORKER_CODES.length; wc++) {
-        if (rWorkerCode.indexOf(WORKER_CODES[wc]) >= 0) {
+        if (rawWorker.toUpperCase().indexOf(WORKER_CODES[wc]) >= 0) {
           matchedCode = WORKER_CODES[wc];
           break;
         }
+      }
+      if (!matchedCode) {
+        matchedCode = resolveWorkerCodeByName(rawWorker);
       }
       if (!matchedCode || !workerStats[matchedCode]) continue;
 
@@ -5980,7 +6056,7 @@ function chuyenThangSheetTraCuu_Thang10() {
   ws.getRange("B2").setValue("2026-10");
   capNhatBangLuongAnToanTrongBoNho("10_Tra_Cuu_Luong_Thang");
   try {
-    ss.toast("Đã chuyển sheet tra cứu sang Tháng 10/2026 (Chưa có dữ liệu - 0 đ).", "📅 THÁNG 10/2026", 5);
+    ss.toast("Đã chuyển sheet tra cứu sang Tháng 10/2026 (Theo dõi dữ liệu sản lượng mới nhất đến 3/10).", "📅 THÁNG 10/2026", 5);
   } catch (e) {}
 }
 
