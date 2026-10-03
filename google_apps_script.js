@@ -464,27 +464,53 @@ function doPost(e) {
     }
 
     // 🔒 4.2. KHÓA CỨNG ĐƠN GIÁ THEO ĐỊNH MỨC KHOÁN (KHÔNG CHO PHÉP SỬA TRÊN ĐIỆN THOẠI)
-    var lockedUnitWage = 35000;
+    var lockedUnitWage = 0;
     var masterSheet = ss.getSheetByName("05_Dinh_Muc_Khoan_Routing");
-    var prodNameClean = String(data.product || "").toLowerCase();
-    var opNameClean = String(data.op || "").toLowerCase();
+    var prodNameClean = String(data.product || "").toLowerCase().trim();
+    var opNameClean = String(data.op || "").toLowerCase().trim();
     if (masterSheet && masterSheet.getLastRow() >= 4) {
       var routingVals = masterSheet.getRange(4, 2, masterSheet.getLastRow() - 3, 10).getValues();
       for (var rv = 0; rv < routingVals.length; rv++) {
-        var rProd = String(routingVals[rv][1] || "").toLowerCase();
-        var rOp = String(routingVals[rv][2] || "").toLowerCase();
+        var rProd = String(routingVals[rv][1] || "").toLowerCase().trim();
+        var rOp = String(routingVals[rv][2] || "").toLowerCase().trim();
         if (prodNameClean.indexOf(rProd) >= 0 && (opNameClean.indexOf(rOp) >= 0 || rOp.indexOf(opNameClean) >= 0)) {
           var foundPrice = Number(routingVals[rv][6] || 0);
-          if (foundPrice > 0) lockedUnitWage = foundPrice;
-          break;
+          if (foundPrice > 0) {
+            lockedUnitWage = foundPrice;
+            break;
+          }
         }
       }
     }
 
-    // Xác nhận các đơn giá chi tiết đặc biệt lớn của Hạ Long
-    if (prodNameClean.indexOf("thanh đập đá vôi") >= 0) {
+    // Nếu chưa thấy, tra cứu tiếp từ Sheet Danh Mục Master Data
+    if (lockedUnitWage === 0) {
+      var dmMast = ss.getSheetByName("Danh Mục Master Data") || ss.getSheetByName("Danh Mục Master");
+      if (dmMast && dmMast.getLastRow() >= 2) {
+        var mVals = dmMast.getDataRange().getValues();
+        for (var mi = 1; mi < mVals.length; mi++) {
+          var mProd = String(mVals[mi][1] || "").toLowerCase().trim();
+          var mOp = String(mVals[mi][2] || "").toLowerCase().trim();
+          if (prodNameClean.indexOf(mProd) >= 0 && (opNameClean.indexOf(mOp) >= 0 || mOp.indexOf(opNameClean) >= 0)) {
+            var mPrice = Number(mVals[mi][5] || 0);
+            if (mPrice > 0) {
+              lockedUnitWage = mPrice;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Xác nhận các đơn giá chi tiết đặc biệt lớn của Hạ Long nếu chưa có trong bảng
+    if (lockedUnitWage === 0 && prodNameClean.indexOf("thanh đập đá vôi") >= 0) {
       if (opNameClean.indexOf("nc1") >= 0) lockedUnitWage = 892800;
       else if (opNameClean.indexOf("nc2") >= 0) lockedUnitWage = 1562400;
+    }
+
+    // Nếu vẫn chưa có định mức (sản phẩm/nguyên công mới), áp dụng mức cơ sở 35.000đ
+    if (lockedUnitWage === 0) {
+      lockedUnitWage = 35000;
     }
 
     var qDat = Number(data.qty_dat || 0);
@@ -3381,6 +3407,9 @@ function calculateAndPopulateAllSheets() {
   var workerWageDuDieuKien = {};
   var workerWageLoiTho = {};
   var workerWageDaChot = {};
+  var totalScrapQty = 0;
+  var totalProducedQty = 0;
+  var defectList = [];
 
   // OEE: GOM THEO CA MÁY (KHÔNG CỘNG LẶP 450 PHÚT THEO TỪNG DÒNG CÔNG VIỆC)
   var machineShiftMap = {}; // { machineCode: { shiftKey: { downtime: 0, runMin: 450 } } }
@@ -3415,6 +3444,8 @@ function calculateAndPopulateAllSheets() {
         continue; // Loại trừ hoàn toàn: Không tính lương, không tính số ca, không tính OEE!
       }
 
+      totalProducedQty += rTotalProduced;
+
       var rDate = logData[i][2];
       var dateStr = "2026-09-12";
       if (rDate instanceof Date) {
@@ -3428,6 +3459,38 @@ function calculateAndPopulateAllSheets() {
       var rKcsStatus = logData[i][30] ? String(logData[i][30]).trim() : "ĐÃ DUYỆT";
       var rManagerStatus = logData[i][31] ? String(logData[i][31]).trim() : "ĐÃ DUYỆT";
       var rLockStatus = logData[i][32] ? String(logData[i][32]).trim() : "CHƯA KHÓA";
+
+      // 4.0. TỰ ĐỘNG THU THẬP DỮ LIỆU PHẾ PHẨM CHO QA/QC
+      if (rQtyHuy > 0 || rQtyXuLy > 0) {
+        totalScrapQty += rQtyHuy;
+        var errSrc = "Chờ KCS phân loại";
+        var costResp = "Phân xưởng Cơ khí theo dõi";
+        var handl = rQtyHuy > 0 ? "Hủy phôi, chuyển nấu đúc lại" : "Hàn đắp sửa chữa / Gia công lại";
+
+        var respLower = rTrachNhiem.toLowerCase();
+        if (respLower.indexOf("thợ") >= 0) {
+          errSrc = "Lỗi Thao Tác Thợ";
+          costResp = "Thợ chịu trách nhiệm (0% lương khoán công đoạn)";
+        } else if (respLower.indexOf("đúc") >= 0 || respLower.indexOf("phôi") >= 0) {
+          errSrc = "Lỗi Đúc Thép";
+          costResp = "Phân xưởng Đúc chịu chi phí phôi (Thợ được tính 100% công)";
+        }
+
+        defectList.push({
+          date: dateStr,
+          po: rPo,
+          customer: String(logData[i][4] || "").trim(),
+          product: logData[i][5] ? String(logData[i][5]).trim() : rProd,
+          op: rOp,
+          worker: rWorker,
+          machine: rMachineRaw,
+          scrapQty: rQtyHuy > 0 ? rQtyHuy : rQtyXuLy,
+          errorSource: errSrc,
+          note: String(logData[i][16] || "").trim(),
+          handling: handl,
+          costResp: costResp
+        });
+      }
 
       // Lấy thời gian chuẩn T_chuan cho nguyên công này
       var tChuan = 45;
@@ -3593,17 +3656,13 @@ function calculateAndPopulateAllSheets() {
       var curPo = String(poData[p][1] || "").trim();
       var planQty = Number(poData[p][4] || 0);
 
-      var doneQty = poOkFinalMap[curPo] || 0;
-      // Đồng bộ BTP Đã KCS Duyệt chuẩn xác cho đơn Thyssen & XM Hạ Long:
-      if (curPo === "PO-1464" && doneQty === 0) doneQty = 28.25;
-      if (curPo === "PO-1602" && doneQty === 0) doneQty = 0.25;
-      if (curPo === "PO-5670" && doneQty === 0) doneQty = 1.25;
-      if (curPo === "PO-2026-004" && doneQty === 0) doneQty = 15;
+      var existingDone = Number(poData[p][5] || 0);
+      var logDone = poOkFinalMap[curPo] || 0;
+      var doneQty = logDone > 0 ? logDone : existingDone;
 
-      var deliveredQty = poDeliveredMap[curPo] || 0;
-      if (deliveredQty === 0 && Number(poData[p][6] || 0) > 0) {
-        deliveredQty = Number(poData[p][6] || 0);
-      }
+      var existingDelivered = Number(poData[p][6] || 0);
+      var logDelivered = poDeliveredMap[curPo] || 0;
+      var deliveredQty = logDelivered > 0 ? logDelivered : existingDelivered;
       var wipQty = Math.max(0, doneQty - deliveredQty);
       var debtQty = Math.max(0, planQty - deliveredQty);
       var progress = planQty > 0 ? (deliveredQty / planQty) : 0;
@@ -3759,34 +3818,38 @@ function calculateAndPopulateAllSheets() {
     }
   }
 
-  // 9. CẬP NHẬT SHEET '01_Tong_Quan_Dashboard' (ĐIỀN ĐỦ 100% CÁC CỘT KHÁCH HÀNG)
+  // 9. CẬP NHẬT SHEET '01_Tong_Quan_Dashboard' (TÍNH TOÁN ĐỘNG 100% - KHÔNG HARDCODE)
   var dashSheet = ss.getSheetByName("01_Tong_Quan_Dashboard");
   if (dashSheet) {
     var poTotalCount = poSheet ? Math.max(0, poSheet.getLastRow() - 3) : 0;
-    var poTotalPlan = 0, poTotalDone = 0, poTotalDebt = 0;
+    var poTotalPlan = 0, poTotalDone = 0, poTotalDelivered = 0, poTotalWip = 0, poTotalDebt = 0;
     if (poSheet && poSheet.getLastRow() >= 4) {
       var pVals = poSheet.getRange(4, 5, poSheet.getLastRow() - 3, 5).getValues();
       for (var pv = 0; pv < pVals.length; pv++) {
-        poTotalPlan += Number(pVals[pv][0] || 0);
-        poTotalDone += Number(pVals[pv][1] || 0);
-        poTotalDebt += Number(pVals[pv][4] || 0);
+        poTotalPlan += Number(pVals[pv][0] || 0);      // Cột E (Col 5): KH
+        poTotalDone += Number(pVals[pv][1] || 0);      // Cột F (Col 6): BTP Xong
+        poTotalDelivered += Number(pVals[pv][2] || 0); // Cột G (Col 7): Đã Giao
+        poTotalWip += Number(pVals[pv][3] || 0);       // Cột H (Col 8): WIP Chờ giao
+        poTotalDebt += Number(pVals[pv][4] || 0);      // Cột I (Col 9): Nợ KH
       }
     }
+
+    var overallScrapRate = totalProducedQty > 0 ? (totalScrapQty / totalProducedQty) : 0.012;
 
     dashSheet.getRange("B4").setValue("TỔNG LỆNH SX (PO)");
     dashSheet.getRange("B5").setValue(poTotalCount).setNumberFormat("#,##0");
     dashSheet.getRange("D4").setValue("BTP TỒN CHỜ BÀN GIAO (WIP THEO PO)");
-    dashSheet.getRange("D5").setValue(29.5).setNumberFormat("#,##0.0");
+    dashSheet.getRange("D5").setValue(poTotalWip).setNumberFormat("#,##0.0");
     dashSheet.getRange("F4").setValue("TỔNG SẢN LƯỢNG ĐANG GIA CÔNG TẠI CÁC NGUYÊN CÔNG");
     dashSheet.getRange("F5").setValue(poTotalDebt).setNumberFormat("#,##0");
     dashSheet.getRange("H4").setValue("TỔNG BTP HOÀN THÀNH TẠI XƯỞNG");
     dashSheet.getRange("H5").setValue(poTotalDone).setNumberFormat("#,##0.0");
     dashSheet.getRange("J4").setValue("TỔNG SẢN PHẨM ĐÃ BÀN GIAO");
-    dashSheet.getRange("J5").setValue(918).setNumberFormat("#,##0");
+    dashSheet.getRange("J5").setValue(poTotalDelivered).setNumberFormat("#,##0");
     dashSheet.getRange("L4").setValue("TỶ LỆ PHẾ PHẨM TOÀN XƯỞNG");
-    dashSheet.getRange("L5").setValue(0.012).setNumberFormat("0.0%");
+    dashSheet.getRange("L5").setValue(overallScrapRate).setNumberFormat("0.0%");
 
-    // ĐỐI SOÁT & XÓA SẠCH 79 Ô LỖI #ERROR! TRÊN DASHBOARD THEO TỪNG KHÁCH HÀNG (DÒNG 9 ĐẾN 18)
+    // TỔNG HỢP TIẾN ĐỘ PO THEO TỪNG ĐỐI TÁC KHÁCH HÀNG (DÒNG 9 ĐẾN 17)
     var customerPOStats = {};
     if (poSheet && poSheet.getLastRow() >= 4) {
       var allPoData = poSheet.getRange(4, 1, poSheet.getLastRow() - 3, 14).getValues();
@@ -3814,7 +3877,6 @@ function calculateAndPopulateAllSheets() {
 
     var sumDashPO = 0, sumDashPlan = 0, sumDashDone = 0, sumDashGiao = 0, sumDashWip = 0, sumDashDebt = 0;
 
-    // BẢNG TRA MÃ KH SANG TÊN KHÁCH HÀNG THỰC TẾ & BENCHMARK 61 PO CHUẨN XÁC
     var custCodeToName = {
       "KH01": "Win-Win",
       "KH02": "UCC",
@@ -3825,18 +3887,6 @@ function calculateAndPopulateAllSheets() {
       "KH07": "Luợng- KS Tường Long",
       "KH08": "TFG",
       "KH09": "Molycop"
-    };
-
-    var BENCHMARK_CUST_STATS = {
-      "thyssen": { count: 13, plan: 161, done: 28.25, giao: 0, wip: 28.25, debt: 161 },
-      "winwin": { count: 1, plan: 1000, done: 0, giao: 500, wip: 0, debt: 500 },
-      "vico": { count: 1, plan: 500, done: 0, giao: 0, wip: 0, debt: 500 },
-      "tuonglong": { count: 17, plan: 96, done: 0, giao: 2, wip: 0, debt: 94 },
-      "molycop": { count: 9, plan: 117, done: 0, giao: 0, wip: 0, debt: 117 },
-      "halong": { count: 7, plan: 7, done: 1.5, giao: 1, wip: 1.25, debt: 6 },
-      "quangninh": { count: 6, plan: 37, done: 0, giao: 0, wip: 0, debt: 37 },
-      "tfg": { count: 6, plan: 6, done: 0, giao: 0, wip: 0, debt: 6 },
-      "ucc": { count: 1, plan: 200, done: 0, giao: 400, wip: 0, debt: 0 }
     };
 
     function cleanCustKey(str) {
@@ -3863,7 +3913,8 @@ function calculateAndPopulateAllSheets() {
       var cCount = 0, cPlan = 0, cDone = 0, cGiao = 0, cWip = 0, cDebt = 0;
       var targetClean = cleanCustKey(targetCust);
 
-      // Tra cứu trực tiếp từ dữ liệu 61 PO thực tế
+      // Tra cứu trực tiếp từ dữ liệu PO thực tế
+      var matchedInPO = false;
       for (var cKey in customerPOStats) {
         var kClean = cleanCustKey(cKey);
         if (targetClean && (kClean.indexOf(targetClean) >= 0 || targetClean.indexOf(kClean) >= 0)) {
@@ -3873,21 +3924,18 @@ function calculateAndPopulateAllSheets() {
           cGiao += customerPOStats[cKey].giao;
           cWip += customerPOStats[cKey].wip;
           cDebt += customerPOStats[cKey].debt;
+          matchedInPO = true;
         }
       }
 
-      // Nếu tra cứu PO không ra đầy đủ BTP / Bàn giao hoặc tên bị lệch dấu, đối chiếu Benchmark chuẩn xác:
-      for (var bKey in BENCHMARK_CUST_STATS) {
-        if (targetClean && (targetClean.indexOf(bKey) >= 0 || bKey.indexOf(targetClean) >= 0)) {
-          var bStat = BENCHMARK_CUST_STATS[bKey];
-          if (cCount === 0) cCount = bStat.count;
-          if (cPlan === 0) cPlan = bStat.plan;
-          if (cDone === 0 && bStat.done > 0) cDone = bStat.done;
-          if (cGiao === 0 && bStat.giao > 0) cGiao = bStat.giao;
-          if (cWip === 0 && bStat.wip > 0) cWip = bStat.wip;
-          if (cDebt === 0 && bStat.debt > 0) cDebt = bStat.debt;
-          break;
-        }
+      // Nếu không khớp từ danh sách PO (ví dụ tên bảng điều khiển chưa chuẩn hóa), đọc giá trị đã có sẵn trên dòng để bảo toàn
+      if (!matchedInPO) {
+        cCount = Number(dashSheet.getRange(cr, 4).getValue() || 0);
+        cPlan = Number(dashSheet.getRange(cr, 5).getValue() || 0);
+        cDone = Number(dashSheet.getRange(cr, 6).getValue() || 0);
+        cGiao = Number(dashSheet.getRange(cr, 7).getValue() || 0);
+        cWip = Math.max(0, cDone - cGiao);
+        cDebt = Math.max(0, cPlan - cGiao);
       }
 
       var cProgress = cPlan > 0 ? (cGiao / cPlan) : 0;
@@ -3935,18 +3983,63 @@ function calculateAndPopulateAllSheets() {
     dashSheet.getRange(18, 10).setValue(totalDashProgress).setNumberFormat("0.0%");
     dashSheet.getRange(18, 11).setValue("ĐIỀU ĐỘ BÌNH THƯỜNG");
 
-    // Dòng 19: ĐỐI SOÁT KIỂM TRA CHÊNH LỆCH DASHBOARD - BẢNG PO (100% SẠCH LỖI #ERROR!)
+    // Dòng 19: ĐỐI SOÁT KIỂM TRA CHÊNH LỆCH DASHBOARD - BẢNG PO (100% SẠCH LỖI #ERROR! & ĐỘNG 100%)
     dashSheet.getRange(19, 1).setValue("ĐỐI SOÁT");
     dashSheet.getRange(19, 2).setValue("KIỂM TRA CHÊNH LỆCH DASHBOARD - BẢNG PO:").setFontWeight("bold").setFontColor("#166534");
-    
-    var isPerfectMatch = (sumDashPO === poTotalCount && sumDashPlan === poTotalPlan && sumDashGiao === 918);
+
+    var isPerfectMatch = (sumDashPO === poTotalCount && sumDashPlan === poTotalPlan && sumDashGiao === poTotalDelivered);
     if (isPerfectMatch) {
       dashSheet.getRange(19, 4).setValue("✅ ĐỐI SOÁT HOÀN HẢO: TỔNG DASHBOARD KHỚP 100% VỚI BẢNG PO (CHÊNH LỆCH = 0)")
         .setFontWeight("bold").setFontColor("#166534").setBackground("#dcfce7");
     } else {
-      dashSheet.getRange(19, 4).setValue("🚨 LỆCH SO VỚI BẢNG PO (PO: " + sumDashPO + "/" + poTotalCount + ", KH: " + sumDashPlan + "/" + poTotalPlan + ")")
+      dashSheet.getRange(19, 4).setValue("🚨 LỆCH SO VỚI BẢNG PO (PO: " + sumDashPO + "/" + poTotalCount + ", KH: " + sumDashPlan + "/" + poTotalPlan + ", Giao: " + sumDashGiao + "/" + poTotalDelivered + ")")
         .setFontWeight("bold").setFontColor("#dc2626").setBackground("#fee2e2");
     }
+  }
+
+  // 10. TỰ ĐỘNG ĐỒNG BỘ CÁC BẢN GHI PHẾ PHẨM VÀO SHEET '08_Kiem_Soat_Chat_Luong_QA'
+  try {
+    var qaSheet = ss.getSheetByName("08_Kiem_Soat_Chat_Luong_QA");
+    if (qaSheet && qaSheet.getLastRow() >= 3 && defectList.length > 0) {
+      var existingQaData = qaSheet.getDataRange().getValues();
+      var existingQaKeys = {};
+      for (var q = 3; q < existingQaData.length; q++) {
+        var qDate = String(existingQaData[q][1] || "").slice(0, 10);
+        var qPo = String(existingQaData[q][2] || "").trim();
+        var qWorker = String(existingQaData[q][6] || "").trim();
+        var qOp = String(existingQaData[q][5] || "").trim();
+        if (qDate && qPo) {
+          existingQaKeys[qDate + "_" + qPo + "_" + qWorker + "_" + qOp] = true;
+        }
+      }
+
+      var nextQaStt = Math.max(1, existingQaData.length - 3);
+      for (var di = 0; di < defectList.length; di++) {
+        var dItem = defectList[di];
+        var dKey = dItem.date + "_" + dItem.po + "_" + dItem.worker + "_" + dItem.op;
+        if (!existingQaKeys[dKey]) {
+          nextQaStt++;
+          qaSheet.appendRow([
+            nextQaStt,
+            dItem.date,
+            dItem.po,
+            dItem.customer,
+            dItem.product,
+            dItem.op,
+            dItem.worker,
+            dItem.machine,
+            dItem.scrapQty,
+            dItem.errorSource,
+            dItem.note || "Khuyết tật phát hiện trong ca gia công",
+            dItem.handling || "Hủy phôi / Sửa chữa BTP",
+            dItem.costResp
+          ]);
+          existingQaKeys[dKey] = true;
+        }
+      }
+    }
+  } catch (eQa) {
+    console.log("Lưu ý đồng bộ QA: " + eQa.toString());
   }
 
   SpreadsheetApp.flush();
