@@ -30,11 +30,14 @@ Hệ thống Google Sheet đã được chuẩn hóa và loại bỏ toàn bộ 
 
 ---
 
-## 3. CƠ CHẾ TÍNH TOÁN 100% SẠCH LỖI `#ERROR!`
+## 3. CƠ CHẾ TÍNH TOÁN 100% SẠCH LỖI `#ERROR!` & KHÔNG CHẮP VÁ (CLOSED-LOOP MANUFACTURING)
 - **Không dùng công thức Excel chứa dấu phẩy `,`**: Tránh hoàn toàn lỗi phân tích cú pháp (`Formula parse error`) do xung đột định dạng vùng Việt Nam.
 - **Tính toán trực tiếp bằng JavaScript (Google V8 Engine)** qua hàm `calculateAndPopulateAllSheets()`:
   - Tự động quét và tổng hợp từ sheet `Nhật Ký Sản Lượng`.
   - Ghi thẳng giá trị thực tế (số lượng, tiền VNĐ, tỷ lệ %) vào các sheet báo cáo.
+  - **Triệt tiêu 100% số liệu hardcode**: Mọi chỉ tiêu KPI trên `01_Tong_Quan_Dashboard` (PO, WIP, Đã giao, Tỷ lệ phế phẩm) và Bảng 1 (9 Khách Hàng) được tính toán động hoàn toàn từ bảng PO và dữ liệu ca thực tế.
+  - **Tự động đồng bộ Sheet `08_Kiem_Soat_Chat_Luong_QA`**: Tự động gom mọi bản ghi phế phẩm (`qty_huy > 0` hoặc `qty_xuly > 0`) từ nhật ký sang sheet QA với phân loại nguồn gốc lỗi (Lỗi Đúc vs Lỗi Thợ) và trách nhiệm chi phí.
+  - **Bảo tồn lũy kế PO**: Tự động cập nhật BTP hoàn thành từ nguyên công cuối (Final OP) và lũy kế đã bàn giao từ sổ BTP mà không ghi đè số liệu lịch sử.
 - **Tự động đồng bộ**: Mỗi khi công nhân bấm nộp báo cáo từ Mini App, hàm `doPost()` sẽ tự động kích hoạt tính toán và cập nhật số liệu ngay lập tức.
 
 ---
