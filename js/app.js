@@ -3,8 +3,10 @@
 const DEFAULT_GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyaHrvXtTVL1i_B3ohANN6E5--aTewsqa_gvlH85l_4xP9vpDWdrG_RM6BSlx_Y472B/exec';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Tự động đồng bộ URL Google Apps Script mới nhất cho mọi thiết bị
-    localStorage.setItem('GOOGLE_SCRIPT_URL', DEFAULT_GOOGLE_SCRIPT_URL);
+    // Chỉ thiết lập URL mặc định nếu chưa có cấu hình trong localStorage
+    if (!localStorage.getItem('GOOGLE_SCRIPT_URL')) {
+        localStorage.setItem('GOOGLE_SCRIPT_URL', DEFAULT_GOOGLE_SCRIPT_URL);
+    }
 
     // Helper: Normalize Vietnamese Unicode (NFC/NFD) and strip non-alphanumeric characters for robust mobile matching
     window.cleanKey = function(str) {
@@ -2395,7 +2397,7 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
     }
 
     function pushOrderDataToCloud(orderObj) {
-        const scriptUrl = DEFAULT_GOOGLE_SCRIPT_URL;
+        const scriptUrl = localStorage.getItem('GOOGLE_SCRIPT_URL') || DEFAULT_GOOGLE_SCRIPT_URL;
         if (!scriptUrl) return;
 
         const payload = {
@@ -2601,7 +2603,7 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
 
     // 🌐 Realtime Cloud Sync for Master Data across all worker devices
     function pushMasterDataToCloud() {
-        const scriptUrl = DEFAULT_GOOGLE_SCRIPT_URL;
+        const scriptUrl = localStorage.getItem('GOOGLE_SCRIPT_URL') || DEFAULT_GOOGLE_SCRIPT_URL;
         if (!scriptUrl) return;
 
         const payload = {
@@ -2632,7 +2634,7 @@ NC10: Đột dấu kiểm tra | 1200 | 18000`;
     }
 
     function fetchMasterDataFromCloud() {
-        const scriptUrl = DEFAULT_GOOGLE_SCRIPT_URL;
+        const scriptUrl = localStorage.getItem('GOOGLE_SCRIPT_URL') || DEFAULT_GOOGLE_SCRIPT_URL;
         if (!scriptUrl) return;
 
         fetch(scriptUrl)

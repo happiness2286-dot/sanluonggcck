@@ -30,15 +30,28 @@ Hệ thống Google Sheet đã được chuẩn hóa và loại bỏ toàn bộ 
 
 ---
 
-## 3. CƠ CHẾ TÍNH TOÁN 100% SẠCH LỖI `#ERROR!` & KHÔNG CHẮP VÁ (CLOSED-LOOP MANUFACTURING)
-- **Không dùng công thức Excel chứa dấu phẩy `,`**: Tránh hoàn toàn lỗi phân tích cú pháp (`Formula parse error`) do xung đột định dạng vùng Việt Nam.
-- **Tính toán trực tiếp bằng JavaScript (Google V8 Engine)** qua hàm `calculateAndPopulateAllSheets()`:
-  - Tự động quét và tổng hợp từ sheet `Nhật Ký Sản Lượng`.
-  - Ghi thẳng giá trị thực tế (số lượng, tiền VNĐ, tỷ lệ %) vào các sheet báo cáo.
-  - **Triệt tiêu 100% số liệu hardcode**: Mọi chỉ tiêu KPI trên `01_Tong_Quan_Dashboard` (PO, WIP, Đã giao, Tỷ lệ phế phẩm) và Bảng 1 (9 Khách Hàng) được tính toán động hoàn toàn từ bảng PO và dữ liệu ca thực tế.
-  - **Tự động đồng bộ Sheet `08_Kiem_Soat_Chat_Luong_QA`**: Tự động gom mọi bản ghi phế phẩm (`qty_huy > 0` hoặc `qty_xuly > 0`) từ nhật ký sang sheet QA với phân loại nguồn gốc lỗi (Lỗi Đúc vs Lỗi Thợ) và trách nhiệm chi phí.
-  - **Bảo tồn lũy kế PO**: Tự động cập nhật BTP hoàn thành từ nguyên công cuối (Final OP) và lũy kế đã bàn giao từ sổ BTP mà không ghi đè số liệu lịch sử.
-- **Tự động đồng bộ**: Mỗi khi công nhân bấm nộp báo cáo từ Mini App, hàm `doPost()` sẽ tự động kích hoạt tính toán và cập nhật số liệu ngay lập tức.
+## 3. CƠ CHẾ VẬN HÀNH ĐƠN NHẤT: CÔNG THỨC THUẦN (SINGLE-SYSTEM FORMULA-DRIVEN)
+*Mốc cập nhật kiến trúc: 24/10/2026 - Chuẩn hóa theo chỉ đạo Quản Đốc*
+
+1. **Phân tách trách nhiệm tuyệt đối giữa Script và Sheet**:
+   - **Apps Script (`doPost`)**: Chỉ đảm nhiệm duy nhất việc tiếp nhận dữ liệu từ Mini App công nhân và ghi an toàn vào sheet `Nhật Ký Sản Lượng` (cột A:R và cột X: Ca làm việc).
+   - **Tất cả các sheet báo cáo còn lại**: Vận hành 100% bằng công thức bảng tính (Spreadsheet Formulas) tự động nhảy số theo thời gian thực như bản Excel chuẩn, không phụ thuộc script chạy ngầm ghi đè.
+   - **Loại bỏ hoàn toàn**: Bỏ `calculateAndPopulateAllSheets`, bỏ `applyLiveFormulasToAllSheets`, bỏ tự động tính lại trên `onEdit`, bỏ trigger định kỳ 15 phút để bảo vệ công thức, tránh xung đột và triệt tiêu độ trễ.
+
+2. **Cơ chế ghi nhật ký chống nhảy dòng (No appendRow conflict)**:
+   - Các cột S:AU trên sheet `Nhật Ký Sản Lượng` được điền sẵn công thức tính toán.
+   - Do đó, script **tuyệt đối không dùng `appendRow`** (tránh bị nhảy xuống sau dòng 2000).
+   - Script dùng thuật toán quét tìm dòng trống thực tế đầu tiên theo **Cột C (Ngày làm)**, sau đó dùng `setValues` ghi trúng đích vào phạm vi Cột A:R (18 cột) và Cột X (Ca làm việc).
+
+3. **Quy trình kiểm soát chất lượng (QA) & phê duyệt (No Auto-Approval)**:
+   - Khi công nhân nộp nhật ký, các cột **AC đến AF** (KCS và Quản đốc nghiệm thu) được giữ nguyên **trống hoàn toàn** (`clearContent()`).
+   - Phê duyệt và phân định trách nhiệm phế phẩm do KCS và Quản Đốc xưởng kiểm tra và nhập tay trực tiếp, không tự động duyệt ngầm.
+
+4. **Bộ 4 chuẩn hóa mã nguồn Apps Script (`google_apps_script.js`)**:
+   - **(a) Trigger 3 ca độc lập (`setupShiftTriggers`)**: Chỉ tìm và xóa đúng 3 trigger cảnh báo ca của chính nó (`checkShift1_14h`, `checkShift2_22h`, `checkShift3_06h`), không xóa nhầm các trigger khác của dự án.
+   - **(b) Chuẩn hóa trạng thái (`normalizeStatusCode`)**: Đặt điều kiện kiểm tra `UNLOCKED` lên trước `LOCKED` để tránh nhận diện sai trạng thái mở khóa kỳ lương.
+   - **(c) Bảng định mức Routing (`masterSheet`)**: Đọc đầy đủ 14 cột (A..N) từ dòng 4: Cột C (Mã SP, index 2), Cột D (Nguyên công, index 3), Cột N (Đơn giá khoán, index 13).
+   - **(d) Script Lock chống xung đột (`LockService`)**: Toàn bộ thao tác ghi nhận nhật ký trong `doPost` được bao bọc bởi `LockService.getScriptLock()` với thời gian chờ an toàn 30 giây (`waitLock(30000)`), tự động giải phóng lock qua khối `finally`.
 
 ---
 
