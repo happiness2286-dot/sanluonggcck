@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Search, X } from 'lucide-react';
+import { Building2, Check, Search, X } from 'lucide-react';
 import { matchesSearch } from '@shared/vnSearch';
 
 export interface PickerOptionItem {
@@ -12,6 +12,12 @@ export interface PickerOptionItem {
   searchKeywords?: string;
 }
 
+export interface PickerFilterTabItem {
+  id: string;
+  label: string;
+  count?: number;
+}
+
 export interface SearchablePickerSheetProps {
   open: boolean;
   onClose: () => void;
@@ -22,6 +28,12 @@ export interface SearchablePickerSheetProps {
   selectedId: string;
   onSelect: (id: string) => void;
   emptyMessage?: string;
+  filterTabs?: {
+    title?: string;
+    tabs: PickerFilterTabItem[];
+    activeTabId: string;
+    onSelectTab: (tabId: string) => void;
+  };
 }
 
 const INITIAL_RENDER_LIMIT = 80;
@@ -36,6 +48,7 @@ export function SearchablePickerSheet({
   selectedId,
   onSelect,
   emptyMessage = 'Không tìm thấy mục phù hợp với từ khóa.',
+  filterTabs,
 }: SearchablePickerSheetProps) {
   const [query, setQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
@@ -146,6 +159,51 @@ export function SearchablePickerSheet({
             </span>
           </div>
         </div>
+
+        {/* Quick Filter Tabs Bar (Chạm để xem SP / PO theo khách hàng) */}
+        {filterTabs && filterTabs.tabs && filterTabs.tabs.length > 0 && (
+          <div className="border-b border-blue-200 bg-blue-50/60 px-3.5 py-2.5">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide text-blue-900">
+                <Building2 className="h-4 w-4 text-blue-600 shrink-0" />
+                <span>{filterTabs.title || 'CHỌN KHÁCH HÀNG NHANH (CHẠM ĐỂ XEM SP):'}</span>
+              </div>
+              {filterTabs.activeTabId !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => filterTabs.onSelectTab('ALL')}
+                  className="text-[11px] font-bold text-blue-600 hover:underline shrink-0"
+                >
+                  Hiện tất cả
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+              {filterTabs.tabs.map((tab) => {
+                const isSelected = filterTabs.activeTabId === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => filterTabs.onSelectTab(tab.id)}
+                    className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs transition-colors ${
+                      isSelected
+                        ? 'bg-blue-600 text-white font-bold shadow-sm'
+                        : 'border border-slate-300 bg-white text-slate-700 font-medium hover:border-blue-400 hover:bg-blue-50/50'
+                    }`}
+                  >
+                    {tab.id !== 'ALL' && (
+                      <Building2 className={`h-3.5 w-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-slate-500'}`} />
+                    )}
+                    <span>
+                      {tab.label} {tab.count !== undefined ? `(${tab.count})` : ''}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Scrollable Multi-line List */}
         <div className="flex-1 space-y-2 overflow-y-auto bg-slate-50/40 p-3">
