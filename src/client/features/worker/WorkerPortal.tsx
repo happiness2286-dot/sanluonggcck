@@ -2135,7 +2135,7 @@ export function WorkerPortal() {
                         <div className="truncate text-sm font-bold text-slate-900">
                           {selectedTool
                             ? `${selectedTool.code} — ${selectedTool.name} (Tồn: ${selectedTool.stockQty ?? 0})`
-                            : toolCode || 'Chọn mã dao cụ (63 mã)...'}
+                            : toolCode || `Chọn mã dao cụ (${toolsList.length} mã)...`}
                         </div>
                       </div>
                       <ChevronRight className="h-5 w-5 shrink-0 text-slate-500" />

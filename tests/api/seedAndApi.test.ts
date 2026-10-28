@@ -71,11 +71,11 @@ describe('SQLite WAL Seeder, RBAC Security & Atomic MES REST API', () => {
     expect(boot.body.products).toHaveLength(334);
     expect(boot.body.products[0].quotedPrice).toBeUndefined();
 
-    // Machines >= 23 including FUJI & OKK1, Tools = 63, Operations = 627, POs = 189
+    // Machines >= 23 including FUJI & OKK1, Tools = 118, Operations = 627, POs = 189
     expect(boot.body.machines.length).toBeGreaterThanOrEqual(23);
     expect(boot.body.machines.some((m: any) => m.name === 'Máy tiện FUJI')).toBe(true);
     expect(boot.body.machines.some((m: any) => m.name === 'Máy phay OKK1')).toBe(true);
-    expect(boot.body.toolsList).toHaveLength(63);
+    expect(boot.body.toolsList).toHaveLength(118);
     expect(boot.body.operations).toHaveLength(627);
     expect(boot.body.ordersList).toHaveLength(189);
     expect(boot.body.schedules.length).toBeGreaterThanOrEqual(14);

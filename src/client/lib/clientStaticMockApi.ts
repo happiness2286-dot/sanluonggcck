@@ -1267,6 +1267,16 @@ export function handleStaticMockApi(
     return { success: true, message: 'Đã liên kết Telegram thành công' };
   }
 
+  if (norm === '/master/tools/swap') {
+    const code = (json && json.toolCode) || 'T01';
+    return {
+      success: true,
+      toolCode: code,
+      stockQty: 25,
+      message: 'Đã cấp phát đổi mảnh 1-đổi-1 cho mã [' + code + '] thành công.',
+    };
+  }
+
   // Bootstrap
   if (norm === '/bootstrap') {
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -1299,7 +1309,11 @@ export function handleStaticMockApi(
       isSundayToday: isSunday,
       workers,
       machines: seed.machines || [],
-      toolsList: (seed.toolsList || []) as CuttingTool[],
+      toolsList: ((seed.toolsList || []) as any[]).map((t: any, i: number) => ({
+        ...t,
+        stockQty: t.stockQty ?? (15 + (i % 12)),
+        usedEdgesTotal: t.usedEdgesTotal ?? 0,
+      })) as CuttingTool[],
       products: getStaticProducts(),
       operations: seed.operations || [],
       ordersList: orders,
