@@ -280,6 +280,14 @@ export function getStaticPayroll(ym: string): {
 }
 
 // ==================== ORDERS & TRAVELER ====================
+function normalizePoId(id: string): string {
+  return (id || '').trim().toUpperCase().replace(/^P[0O]/i, 'PO');
+}
+
+function normalizeProductName(name: string): string {
+  return (name || '').trim().replace(/\s+/g, '').toUpperCase();
+}
+
 export function getStaticOrders(): { items: PurchaseOrderInfo[]; deliveries: any[] } {
   const orders: PurchaseOrderInfo[] = getStoredJson('GCCK_ORDERS', seed.ordersList || []);
   return {
@@ -290,24 +298,118 @@ export function getStaticOrders(): { items: PurchaseOrderInfo[]; deliveries: any
 
 export function getStaticJobTraveler(poId: string): JobTravelerDto {
   const orders = getStaticOrders().items;
-  const po = orders.find((p) => p.poId.toLowerCase() === poId.toLowerCase()) || orders[0];
-  const products = getStaticProducts();
-  const product = products.find((p) => p.spId === po.spId) || null;
+  const targetNorm = normalizePoId(poId);
+  const rawPo =
+    orders.find((p) => normalizePoId(p.poId) === targetNorm) ||
+    orders.find((p) => p.poId === 'PO485-01') ||
+    orders[0];
 
-  const ops: OperationMeta[] = (seed.operations || []).filter(
-    (o: any) => o.spId === po.spId || (product && o.spId === product.spId)
+  const targetProd = normalizeProductName(rawPo.productName);
+
+  // Find matching operations for this specific product
+  const allOps: any[] = seed.operations || [];
+  const matchedOps = allOps.filter((o: any) => {
+    if (o.spId && rawPo.spId && o.spId === rawPo.spId) return true;
+    if (o.productName && rawPo.productName) {
+      return normalizeProductName(o.productName) === targetProd;
+    }
+    return false;
+  });
+
+  // Fallback to sample operations if product not declared in operations table
+  const opsList =
+    matchedOps.length > 0
+      ? matchedOps
+      : allOps.filter((o: any) => (o.productName || '').includes('ALKTOP 1342 M'));
+
+  const totalSteps = opsList.length;
+
+  // Find product and spId in costingList
+  const costingList: any[] = seed.costingList || [];
+  const matchCosting = costingList.find(
+    (c: any) => normalizeProductName(c.productName) === targetProd
   );
+  const spId = matchCosting?.spId || rawPo.spId || 'SP050';
+
+  const mappedOps = opsList.map((op: any, idx: number) => {
+    const stepOrder = idx + 1;
+    const isFinalOp = idx === totalSteps - 1 ? 1 : 0;
+    const opAscii = (op.opName || '').toLowerCase();
+    const isCriticalCheck =
+      isFinalOp === 1 ||
+      opAscii.includes('tinh') ||
+      opAscii.includes('cưa') ||
+      opAscii.includes('cua') ||
+      opAscii.includes('doa') ||
+      opAscii.includes('ren')
+        ? 1
+        : 0;
+
+    const isAlktopSample = rawPo.productName.includes('ALKTOP 1342');
+    const doneOkQty = isAlktopSample
+      ? idx === 0
+        ? 63
+        : 0
+      : Math.floor(rawPo.qtyPo * (isFinalOp === 1 ? 0.9 : 0.6));
+
+    return {
+      ...op,
+      spId,
+      stepOrder,
+      isFinalOp,
+      stage: isFinalOp === 1 ? 'End' : String(stepOrder),
+      isCriticalCheck,
+      defaultMachine: op.defaultMachine || 'Máy Tiện CNC 1',
+      qrPayload: `GCCK|${rawPo.poId}|${op.ncId}`,
+      doneOkQty,
+      faiPassed: true,
+    };
+  });
+
+  const product: ProductMeta = {
+    spId,
+    customer: rawPo.customer || 'Win-Win',
+    productName: rawPo.productName,
+    matName:
+      mappedOps[0]?.matName ||
+      'Thép hợp kim SCM440 / SCW480 / 65G (Thép Mangan)',
+    opCount: totalSteps,
+    setupMinutesStd: 15,
+  };
+
+  const poWithMeta: PurchaseOrderInfo = {
+    ...rawPo,
+    spId,
+    materialLot: (rawPo as any).materialLot || (rawPo as any).rawLot || 'LOT-VICO-2610-001',
+    supplierName:
+      (rawPo as any).supplierName ||
+      (rawPo as any).castSupplier ||
+      'Xưởng Đúc VICO Thắng Lợi',
+    castDate: (rawPo as any).castDate || '2026-10-10',
+    faiStatus: 'FAI_PASSED',
+  };
+
+  const faiRecords: QcInspectionDto[] = [
+    {
+      id: 1,
+      poId: rawPo.poId,
+      ncId: mappedOps[0]?.ncId || 'NC098',
+      spId,
+      workerId: 'NV_KT02',
+      inspectorName: 'Nguyễn Văn Duy (NV_KT02)',
+      inspectionType: 'FAI',
+      result: 'PASS',
+      correctiveAction: 'Đạt chuẩn chi tiết đầu tiên (FAI), cho phép chạy loạt',
+      inspectionDate: '2026-10-27 08:05:19',
+      notes: 'Đạt chuẩn kích thước bản vẽ',
+    } as any,
+  ];
 
   return {
-    po,
+    po: poWithMeta,
     product,
-    operations: ops.map((op) => ({
-      ...op,
-      qrPayload: `GCCK|${po.poId}|${op.ncId}`,
-      doneOkQty: Math.floor(po.qtyPo * 0.7),
-      faiPassed: true,
-    })),
-    faiRecords: [],
+    operations: mappedOps,
+    faiRecords,
     printedAt: new Date().toISOString(),
   };
 }
@@ -318,10 +420,13 @@ export function getStaticTraceability(poId: string): TraceabilityDto {
   return {
     po: traveler.po,
     materialInfo: {
-      materialLot: poAny.rawLot || 'LOT-VICO-2026-001',
-      supplierName: poAny.castSupplier || 'Xưởng Đúc VICO Thắng Lợi',
+      materialLot: poAny.materialLot || 'LOT-VICO-2610-001',
+      supplierName: poAny.supplierName || 'Xưởng Đúc VICO Thắng Lợi',
       castDate: poAny.castDate || '2026-10-10',
-      matName: poAny.matName || 'Thép hợp kim SCM440',
+      matName:
+        traveler.product?.matName ||
+        poAny.matName ||
+        'Thép hợp kim SCM440 / SCW480 / 65G',
     },
     operationsTimeline: traveler.operations.map((op, idx) => ({
       stepOrder: idx + 1,
@@ -333,7 +438,7 @@ export function getStaticTraceability(poId: string): TraceabilityDto {
       totalScrap: 0,
       logs: [],
     })),
-    qcRecords: [],
+    qcRecords: traveler.faiRecords,
     deliveries: [],
   };
 }
