@@ -866,21 +866,21 @@ function checkOverdueReports(shiftName) {
     // 3. ĐỌC DANH SÁCH CÔNG NHÂN TRỰC TIẾP TỪ SHEET
     // --------------------------------------------------------------------------
     var DEFAULT_WORKERS = [
-      { name: "Hoàng Ngọc Hà", code: "NV01", chatId: "5422717407", user: "hoangha", role: "Quản Đốc" },
-      { name: "Nguyễn Trung Đông", code: "NV02", chatId: "7154329103", user: "trungdong", role: "Thợ CNC" },
-      { name: "Phùng Đình Hùng", code: "NV03", chatId: "", user: "dinhhung", role: "Thợ Phay" },
-      { name: "Vũ Tiến Thuận", code: "NV04", chatId: "", user: "tienthuan", role: "Thợ Tiện" },
-      { name: "Nguyễn Mạnh Hà", code: "NV05", chatId: "", user: "manhha", role: "Thợ Tiện" },
-      { name: "Nguyễn Văn Thanh", code: "NV06", chatId: "", user: "vanthanh", role: "Thợ Phay" },
-      { name: "Phùng Gia Phúc", code: "NV07", chatId: "8852796611", user: "giaphuc", role: "Thợ Cắt Dây" },
-      { name: "Trần Văn Dũng", code: "NV08", chatId: "8405571371", user: "vandung", role: "Thợ Phay" },
-      { name: "Trần Đăng Ninh", code: "NV09", chatId: "", user: "dangninh", role: "Thợ Tiện" },
-      { name: "Phạm Văn Tráng", code: "NV10", chatId: "", user: "vantrang", role: "Thợ Tiện" },
-      { name: "Phùng Công Thắng", code: "NV11", chatId: "8906721112", user: "congthang", role: "Thợ CNC" },
-      { name: "Phạm Ngọc Sam", code: "NV12", chatId: "8836472092", user: "ngocsam", role: "Thợ Hàn/Tiện" },
-      { name: "Trần Văn Quỳnh", code: "NV13", chatId: "7090612444", user: "vanquynh", role: "Thợ Nguội" },
-      { name: "Đinh Văn Nhận", code: "NV14", chatId: "8799424202", user: "vannhan", role: "Thợ Bào/Phay" },
-      { name: "Đặng Ngọc Long", code: "NV15", chatId: "8883746026", user: "ngoclong", role: "Thợ Phay" }
+      { name: "Hoàng Ngọc Hà", code: "NV00053", oldCode: "NV01", chatId: "5422717407", user: "hoangha", role: "Quản Đốc" },
+      { name: "Nguyễn Trung Đông", code: "NV00218", oldCode: "NV02", chatId: "7154329103", user: "trungdong", role: "Thợ CNC" },
+      { name: "Phùng Đình Hùng", code: "NV00282", oldCode: "NV03", chatId: "", user: "dinhhung", role: "Thợ Phay" },
+      { name: "Vũ Tiến Thuận", code: "NV00283", oldCode: "NV04", chatId: "", user: "tienthuan", role: "Thợ Tiện" },
+      { name: "Nguyễn Mạnh Hà", code: "NV00217", oldCode: "NV05", chatId: "", user: "manhha", role: "Thợ Tiện" },
+      { name: "Nguyễn Văn Thanh", code: "NV00216", oldCode: "NV06", chatId: "", user: "vanthanh", role: "Thợ Phay" },
+      { name: "Phùng Gia Phúc", code: "NV00267", oldCode: "NV07", chatId: "8852796611", user: "giaphuc", role: "Thợ Cắt Dây" },
+      { name: "Trần Văn Dũng", code: "NV00266", oldCode: "NV08", chatId: "8405571371", user: "vandung", role: "Thợ Phay" },
+      { name: "Trần Đăng Ninh", code: "NV00220", oldCode: "NV09", chatId: "", user: "dangninh", role: "Thợ Tiện" },
+      { name: "Phạm Văn Tráng", code: "NV00215", oldCode: "NV10", chatId: "", user: "vantrang", role: "Thợ Tiện" },
+      { name: "Phùng Công Thắng", code: "NV00219", oldCode: "NV11", chatId: "8906721112", user: "congthang", role: "Thợ CNC" },
+      { name: "Phạm Văn Sam", code: "NV00265", oldCode: "NV12", chatId: "8836472092", user: "ngocsam", role: "Thợ Hàn/Tiện" },
+      { name: "Trần Văn Quỳnh", code: "NV00214", oldCode: "NV13", chatId: "7090612444", user: "vanquynh", role: "Thợ Nguội" },
+      { name: "Đinh Văn Nhận", code: "NV00279", oldCode: "NV14", chatId: "8799424202", user: "vannhan", role: "Thợ Bào/Phay" },
+      { name: "Đặng Ngọc Long", code: "NV00261", oldCode: "NV15", chatId: "8883746026", user: "ngoclong", role: "Thợ Phay" }
     ];
 
     var workerSheet = ss.getSheetByName("Danh Sách Công Nhân") || ss.getSheetByName("CongNhan");
@@ -913,7 +913,7 @@ function checkOverdueReports(shiftName) {
 
     allWorkers.forEach(function (w) {
       // Bỏ qua tài khoản Quản Đốc (Hoàng Ngọc Hà / NV01) - Không réo Quản Đốc nộp khoán
-      if (w.code === "NV01" || w.chatId === "5422717407" || w.name.indexOf("Hoàng Ngọc Hà") >= 0) {
+      if (w.code === "NV00053" || w.code === "NV01" || w.chatId === "5422717407" || w.name.indexOf("Hoàng Ngọc Hà") >= 0) {
         return;
       }
 
@@ -1035,15 +1035,15 @@ function dongBoLienKetTelegramTho() {
 
   // Danh sách công nhân chuẩn kèm Chat ID đã xác minh
   var KNOWN_WORKERS = [
-    { name: "Hoàng Ngọc Hà", code: "NV01", chatId: "5422717407", user: "Quản Đốc Hoàng Hà" },
-    { name: "Nguyễn Trung Đông", code: "NV02", chatId: "7154329103", user: "trungdong" },
-    { name: "Phùng Gia Phúc", code: "NV07", chatId: "8852796611", user: "giaphuc" },
-    { name: "Trần Văn Dũng", code: "NV08", chatId: "8405571371", user: "vandung" },
-    { name: "Phùng Công Thắng", code: "NV11", chatId: "8906721112", user: "congthang" },
-    { name: "Phạm Ngọc Sam", code: "NV12", chatId: "8836472092", user: "ngocsam" },
-    { name: "Trần Văn Quỳnh", code: "NV13", chatId: "7090612444", user: "vanquynh" },
-    { name: "Đinh Văn Nhận", code: "NV14", chatId: "8799424202", user: "vannhan" },
-    { name: "Đặng Ngọc Long", code: "NV15", chatId: "8883746026", user: "ngoclong" }
+    { name: "Hoàng Ngọc Hà", code: "NV00053", oldCode: "NV01", chatId: "5422717407", user: "Quản Đốc Hoàng Hà" },
+    { name: "Nguyễn Trung Đông", code: "NV00218", oldCode: "NV02", chatId: "7154329103", user: "trungdong" },
+    { name: "Phùng Gia Phúc", code: "NV00267", oldCode: "NV07", chatId: "8852796611", user: "giaphuc" },
+    { name: "Trần Văn Dũng", code: "NV00266", oldCode: "NV08", chatId: "8405571371", user: "vandung" },
+    { name: "Phùng Công Thắng", code: "NV00219", oldCode: "NV11", chatId: "8906721112", user: "congthang" },
+    { name: "Phạm Văn Sam", code: "NV00265", oldCode: "NV12", chatId: "8836472092", user: "ngocsam" },
+    { name: "Trần Văn Quỳnh", code: "NV00214", oldCode: "NV13", chatId: "7090612444", user: "vanquynh" },
+    { name: "Đinh Văn Nhận", code: "NV00279", oldCode: "NV14", chatId: "8799424202", user: "vannhan" },
+    { name: "Đặng Ngọc Long", code: "NV00261", oldCode: "NV15", chatId: "8883746026", user: "ngoclong" }
   ];
 
   // Tạo map tra cứu theo Mã nhân viên (NV01, NV02,...) và Tên Đăng Nhập

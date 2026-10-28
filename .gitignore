@@ -1,3 +1,12 @@
+# Dependencies & build
+node_modules/
+dist/
+
+# SQLite databases & temp WAL
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+
 # Installer & binaries
 Git-*.exe
 *.exe
@@ -20,4 +29,5 @@ scratch/
 
 # Backup files
 *_BACKUP*.js
+
 

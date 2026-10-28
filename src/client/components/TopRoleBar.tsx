@@ -1,0 +1,233 @@
+import React, { useEffect, useState } from 'react';
+import {
+  CalendarClock,
+  ChevronUp,
+  CloudOff,
+  Factory,
+  KeyRound,
+  MonitorPlay,
+  Printer,
+  Shield,
+  Smartphone,
+  UserCheck,
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Badge, useToast } from './ui/IndustrialPrimitives';
+import { navigateTo } from '../lib/navigation';
+import {
+  flushOfflineOutbox,
+  getOfflineOutbox,
+  subscribeOfflineOutbox,
+} from '../lib/offlineOutbox';
+
+export interface TopRoleBarProps {
+  currentPath: string;
+}
+
+export function TopRoleBar({ currentPath }: TopRoleBarProps) {
+  const { user, authMode, quickSwitch, openPinModal } = useAuth();
+  const toast = useToast();
+  const [collapsedKiosk, setCollapsedKiosk] = useState(false);
+  const [outboxCount, setOutboxCount] = useState<number>(() => getOfflineOutbox().length);
+
+  useEffect(() => {
+    return subscribeOfflineOutbox((items) => setOutboxCount(items.length));
+  }, []);
+
+  const isAndon = currentPath.startsWith('/andon');
+
+  if (isAndon && collapsedKiosk) {
+    return (
+      <div className="no-print fixed right-3 top-2 z-50">
+        <button
+          type="button"
+          onClick={() => setCollapsedKiosk(false)}
+          className="rounded-lg border border-slate-300 bg-white/95 px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-card backdrop-blur transition-colors hover:border-blue-500 hover:bg-slate-50 hover:text-blue-700"
+        >
+          Hiện thanh chuyển cổng
+        </button>
+      </div>
+    );
+  }
+
+  const handleRoleNav = async (
+    targetPath: string,
+    targetWorkerId?: string,
+    label?: string
+  ) => {
+    try {
+      if (targetWorkerId) {
+        if (authMode === 'DEMO_QUICK') {
+          if (user?.workerId !== targetWorkerId) {
+            await quickSwitch({ workerId: targetWorkerId });
+          }
+        } else if (!user || (targetPath.startsWith('/admin') && user.appRole === 'WORKER')) {
+          openPinModal(targetWorkerId);
+          return;
+        }
+      }
+      navigateTo(targetPath);
+      if (label) toast.info(`Đã chuyển sang ${label}`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Không thể chuyển vai trò.');
+      openPinModal(targetWorkerId);
+    }
+  };
+
+  const isWorkerActive = currentPath === '/' || currentPath.startsWith('/worker');
+  const isQcActive =
+    currentPath.startsWith('/admin') &&
+    (user?.appRole === 'QC' || user?.appRole === 'SHIFT_LEADER');
+  const isAdminActive =
+    currentPath.startsWith('/admin') &&
+    user?.appRole !== 'QC' &&
+    user?.appRole !== 'SHIFT_LEADER';
+  const isPrintActive = currentPath.startsWith('/print/');
+
+  const pillCls = (active: boolean) =>
+    `inline-flex min-h-[32px] items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition-all ${
+      active
+        ? 'bg-white text-blue-700 shadow-sm ring-1 ring-slate-200 font-bold'
+        : 'text-slate-600 hover:bg-white/60 hover:text-slate-900 font-semibold'
+    }`;
+
+  return (
+    <header className="no-print relative lg:sticky lg:top-0 z-40 w-full max-w-full border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm">
+      <div className="mx-auto flex w-full max-w-[1920px] flex-wrap lg:flex-nowrap lg:h-[52px] items-center justify-between gap-2 px-2.5 py-1.5 lg:py-0 sm:px-4">
+        {/* Brand Identity */}
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
+            <Factory className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">
+              GCCK Thắng Lợi
+            </div>
+          </div>
+        </div>
+
+        {/* 1-Click Role & Shell Switcher */}
+        <nav
+          aria-label="Chuyển nhanh cổng giao diện"
+          className="flex flex-wrap lg:flex-nowrap items-center gap-1 rounded-xl bg-slate-100 p-1"
+        >
+          <button
+            type="button"
+            onClick={() =>
+              void handleRoleNav(
+                '/worker',
+                user?.appRole === 'WORKER' ? user.workerId : 'NV00214',
+                '📱 Cổng Công Nhân'
+              )
+            }
+            className={pillCls(isWorkerActive)}
+          >
+            <Smartphone className="h-3.5 w-3.5 text-emerald-600" />
+            <span>Công Nhân</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleRoleNav('/admin', 'NV_KT02', '🔍 Tổ Trưởng / QC')}
+            className={pillCls(isQcActive)}
+          >
+            <UserCheck className="h-3.5 w-3.5 text-amber-600" />
+            <span>Tổ Trưởng / QC</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleRoleNav('/admin', 'NV00053', '🛡️ Quản Trị Admin')}
+            className={pillCls(isAdminActive)}
+          >
+            <Shield className="h-3.5 w-3.5 text-blue-600" />
+            <span>Quản Trị Admin</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleRoleNav('/andon', undefined, '📺 TV Andon 55"')}
+            className={pillCls(isAndon)}
+          >
+            <MonitorPlay className="h-3.5 w-3.5 text-violet-600" />
+            <span>TV Andon 55&quot;</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleRoleNav('/admin', 'NV_KT02', '📅 Kế Hoạch & Báo Cáo')}
+            className={pillCls(currentPath.includes('daily_schedule') || currentPath.startsWith('/print/daily-schedule'))}
+          >
+            <CalendarClock className="h-3.5 w-3.5 text-blue-600" />
+            <span>Kế Hoạch &amp; Tuần</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              void handleRoleNav('/print/traveler/PO485-01', undefined, '🖨️ Phiếu Công Nghệ QR')
+            }
+            className={pillCls(isPrintActive)}
+          >
+            <Printer className="h-3.5 w-3.5 text-slate-500" />
+            <span>Phiếu QR</span>
+          </button>
+        </nav>
+
+        {/* Active User & PIN / Offline Sync Status */}
+        <div className="flex flex-wrap lg:flex-nowrap items-center gap-1.5">
+          {outboxCount > 0 && (
+            <button
+              type="button"
+              onClick={() => void flushOfflineOutbox()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 transition-colors hover:bg-amber-100"
+              title="Nhấn để đồng bộ ngay dữ liệu lưu tạm ngoại tuyến"
+            >
+              <CloudOff className="h-3.5 w-3.5 text-amber-600" />
+              <span className="font-mono-num">Đang đồng bộ ({outboxCount})</span>
+            </button>
+          )}
+
+          {user ? (
+            <Badge
+              variant={
+                user.appRole === 'ADMIN' || user.appRole === 'DIRECTOR'
+                  ? 'info'
+                  : user.appRole === 'QC' || user.appRole === 'SHIFT_LEADER'
+                    ? 'warning'
+                    : 'success'
+              }
+              className="max-w-[200px] truncate py-1"
+            >
+              <span className="truncate">
+                {user.name} ({user.workerId})
+              </span>
+            </Badge>
+          ) : (
+            <Badge variant="neutral">Chưa đăng nhập</Badge>
+          )}
+
+          <button
+            type="button"
+            onClick={() => openPinModal(user?.workerId)}
+            className="inline-flex min-h-[32px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-blue-500 hover:text-blue-700"
+          >
+            <KeyRound className="h-3.5 w-3.5 text-blue-600" />
+            <span>Đổi PIN / TK</span>
+          </button>
+
+          {isAndon && (
+            <button
+              type="button"
+              onClick={() => setCollapsedKiosk(true)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
+              title="Thu gọn thanh trên TV Kiosk"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}

@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --gcck-canvas: #f4f6fb;
+  --gcck-surface: #ffffff;
+  --gcck-elevated: #f8fafc;
+  --gcck-subtle: #f1f5f9;
+  --gcck-border: #e2e8f0;
+  --gcck-border-strong: #cbd5e1;
+  --gcck-text: #0f172a;
+  --gcck-muted: #64748b;
+  --gcck-accent: #2563eb;
+  --gcck-run: #059669;
+  --gcck-warn: #d97706;
+  --gcck-stop: #e11d48;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+  background-color: var(--gcck-canvas);
+  color: var(--gcck-text);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.font-mono-num {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bright Daylight Precision Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Crisp Black-on-White A4/A5 Print Styles for QR Job Traveler */
+@media print {
+  @page {
+    margin: 8mm;
+  }
+
+  html,
+  body,
+  #root {
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    max-width: none !important;
+  }
+
+  .no-print,
+  header.no-print,
+  nav.no-print {
+    display: none !important;
+  }
+
+  .print-sheet {
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: 1px solid #000000 !important;
+  }
+}
