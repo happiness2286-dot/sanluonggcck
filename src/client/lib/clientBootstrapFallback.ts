@@ -9,6 +9,7 @@ import type {
   WorkerDto,
 } from '@shared/types';
 import seedDataRaw from '../../../data/seed_gcck_1233.json';
+import { handleStaticMockApi, sampleHandoverAlerts } from './clientStaticMockApi';
 
 const GAS_WEB_APP_URL =
   'https://script.google.com/macros/s/AKfycbx3YEacwHuxAdYb2yN1qckG4tmydnmmK4f8C_KVtQmUWmpBvJYUh_Jc1DrFZpTeM-bruQ/exec';
@@ -74,23 +75,23 @@ export function getStaticFallbackBootstrap(selectedWorkerId?: string): Bootstrap
     products: Array.from(productMap.values()),
     operations: (seed.operations || []) as OperationMeta[],
     ordersList: seed.ordersList || [],
-    schedules: [],
-    machineLoads: [],
-    qcInspections: [],
-    recentLogs: (seed.recentLogs || []).slice(0, 50),
-    todayAccumulated: seed.todayAccumulated || {},
-    opDoneMap: seed.opDoneMap || {},
+    schedules: (handleStaticMockApi('/schedules', 'GET') as any)?.schedules || [],
+    machineLoads: (handleStaticMockApi('/schedules', 'GET') as any)?.loads || [],
+    qcInspections: (handleStaticMockApi('/qc', 'GET') as any)?.items || [],
+    recentLogs: (handleStaticMockApi('/logs', 'GET') as any)?.items || [],
+    todayAccumulated: { NV00053: 157500 },
+    opDoneMap: seed.opDoneMap || { NC098: 63, NC622: 11, NC158: 8 },
     kpiSummary: {
-      totalOk: Number(seed.kpiSummary?.totalOk || 0),
-      totalRework: Number(seed.kpiSummary?.totalRework || 0),
-      totalScrap: Number(seed.kpiSummary?.totalScrap || 0),
+      totalOk: 82,
+      totalRework: 1,
+      totalScrap: 0,
       totalStopMinutes: 0,
-      runningMachines: (seed.machines || []).length,
-      bottleneckMachines: 0,
+      runningMachines: 11,
+      bottleneckMachines: 6,
       openOrders: (seed.ordersList || []).length,
-      overdueOrders: 0,
+      overdueOrders: 124,
     },
-    shiftHandoverAlerts: [],
+    shiftHandoverAlerts: sampleHandoverAlerts,
     config: {
       AUTH_MODE: 'DEMO_QUICK',
       TELEGRAM_BOT_USERNAME: 'gcck_sanluong_2026_bot',

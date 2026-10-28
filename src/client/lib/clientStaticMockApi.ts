@@ -4,6 +4,7 @@ import type {
   AuthSessionResponse,
   AuthSessionUser,
   BootstrapPayload,
+  CuttingTool,
   DailyPlanRow,
   EmployeeAttSummary,
   JobTravelerDto,
@@ -19,6 +20,7 @@ import type {
   QcInspectionDto,
   ReportSubmitPayload,
   ScheduleBlock,
+  ShiftHandoverAlert,
   SyncOutboxItem,
   TraceabilityDto,
   WeeklyReportData,
@@ -105,6 +107,512 @@ export function getStaticProducts(): ProductMeta[] {
     }
   });
   return Array.from(map.values());
+}
+
+// ==================== SAMPLE HANDOVER ALERTS ====================
+export const sampleHandoverAlerts: ShiftHandoverAlert[] = [
+  {
+    id: 1,
+    machineName: 'Máy phay OKK1',
+    workerName: 'Hoàng Ngọc Hà',
+    workDate: '25/10/2026',
+    shiftType: 'Ca 1',
+    poId: 'PO-THEO-KH',
+    productName: 'TL XL 93A',
+    opName: 'G/c phay Mp ht',
+    handoverNote: 'Dao phay mặt mới thay cạnh số 2, chạy êm.',
+    createdAt: '2026-10-25 14:05:00',
+  },
+  {
+    id: 2,
+    machineName: 'Máy tiện FUJI',
+    workerName: 'Hoàng Ngọc Hà',
+    workDate: '27/10/2026',
+    shiftType: 'Ca 2',
+    poId: 'PO-THEO-KH',
+    productName: 'Búa đập loại máy nghiền đứng VHC-111 theo bv: VHC-20102',
+    opName: 'G/c làm định vị',
+    handoverNote: 'Gá kẹp chuẩn đồng tâm <0.02mm, chú ý phôi cuộn ở lỗ định vị.',
+    createdAt: '2026-10-27 22:10:00',
+  },
+];
+
+// ==================== SAMPLE SCHEDULE BLOCKS ====================
+export const sampleSchedules: ScheduleBlock[] = [
+  {
+    id: 1,
+    machineId: 'M20',
+    machineName: 'Máy Khoan cần Yoshida',
+    poId: 'PO-MAU-VF',
+    ncId: 'NC050',
+    productName: 'Mẫu Thử — G/c cắt dây',
+    opName: 'G/c cắt dây',
+    matName: 'Thép C45 / S45C',
+    toolCode: 'T05',
+    workDate: '2026-10-27',
+    shiftType: 'Ca 2 (Chiều 14h-22h)',
+    plannedQty: 16,
+    plannedHours: 8.0,
+    isLightsOut: 0,
+    sequenceOrder: 1,
+    status: 'PLANNED',
+    note: 'Kế hoạch điều độ Lean SMED',
+  },
+  {
+    id: 2,
+    machineId: 'M07',
+    machineName: 'Máy Phay CNC1',
+    poId: 'PO485-01',
+    ncId: 'NC098',
+    productName: 'ALKTOP 1342 M',
+    opName: 'G/c hoàn thiện',
+    matName: 'Inox SUS304 / SUS316',
+    toolCode: 'T01',
+    workDate: '2026-10-28',
+    shiftType: 'Ca 3 (Đêm 22h-06h)',
+    plannedQty: 24,
+    plannedHours: 7.5,
+    isLightsOut: 1,
+    sequenceOrder: 1,
+    status: 'RUNNING',
+    note: '🌙 Chạy tự động Lights-out ban đêm (phôi lớn chu kỳ dài)',
+  },
+  {
+    id: 3,
+    machineId: 'M02',
+    machineName: 'Máy Tiện CNC 1',
+    poId: 'PO485-02',
+    ncId: 'NC103',
+    productName: 'ALKTOP 2155 H',
+    opName: 'G/c tiện hoàn thiện',
+    matName: 'Thép hợp kim SCM440',
+    toolCode: 'T03',
+    workDate: '2026-10-28',
+    shiftType: 'Ca 1 (Sáng 06h-14h)',
+    plannedQty: 20,
+    plannedHours: 8.0,
+    isLightsOut: 0,
+    sequenceOrder: 1,
+    status: 'RUNNING',
+    note: 'Chạy ưu tiên đơn hàng gấp',
+  },
+  {
+    id: 4,
+    machineId: 'M03',
+    machineName: 'Máy Tiện CNC 2',
+    poId: 'PO486-01',
+    ncId: 'NC096',
+    productName: 'ALKTOP 1135 M',
+    opName: 'G/c hoàn thiện',
+    matName: 'Thép SKD11',
+    toolCode: 'T02',
+    workDate: '2026-10-28',
+    shiftType: 'Ca 2 (Chiều 14h-22h)',
+    plannedQty: 18,
+    plannedHours: 8.0,
+    isLightsOut: 0,
+    sequenceOrder: 2,
+    status: 'PLANNED',
+    note: 'Gá kẹp phôi đúc VICO',
+  },
+  {
+    id: 5,
+    machineId: 'M21',
+    machineName: 'Máy cưa băng',
+    poId: 'PO480-01',
+    ncId: 'NC298',
+    productName: 'ISHIZUE 318Dw650',
+    opName: 'G/c Cưa hoàn thiện',
+    matName: 'Gang / Hợp kim Cr chịu mài mòn',
+    toolCode: 'T10',
+    workDate: '2026-10-28',
+    shiftType: 'Ca 3 (Đêm 22h-06h)',
+    plannedQty: 12,
+    plannedHours: 7.5,
+    isLightsOut: 1,
+    sequenceOrder: 1,
+    status: 'RUNNING',
+    note: '🌙 Đề xuất Ca 3 Lights-out cưa tự động',
+  },
+  {
+    id: 6,
+    machineId: 'M01',
+    machineName: 'Máy tiện OKUMA',
+    poId: 'DH-388',
+    ncId: 'NC622',
+    productName: 'TL XL 93A',
+    opName: 'G/c phay Mp ht',
+    matName: 'Thép C45 / S45C',
+    toolCode: 'T04',
+    workDate: '2026-10-28',
+    shiftType: 'Ca 1 (Sáng 06h-14h)',
+    plannedQty: 15,
+    plannedHours: 8.0,
+    isLightsOut: 0,
+    sequenceOrder: 1,
+    status: 'RUNNING',
+    note: 'Dao phay mặt thay cạnh số 2',
+  },
+  {
+    id: 7,
+    machineId: 'M08',
+    machineName: 'Máy Phay CNC2',
+    poId: 'PO486-02',
+    ncId: 'NC104',
+    productName: 'ALKTOP 2681 H',
+    opName: 'Gia công phay CNC',
+    matName: 'Thép SKD11',
+    toolCode: 'T01',
+    workDate: '2026-10-28',
+    shiftType: 'Ca 3 (Đêm 22h-06h)',
+    plannedQty: 10,
+    plannedHours: 7.5,
+    isLightsOut: 1,
+    sequenceOrder: 1,
+    status: 'PLANNED',
+    note: '🌙 Chạy tự động ban đêm',
+  },
+];
+
+// ==================== SAMPLE PRODUCTION LOGS ====================
+export const sampleProductionLogs: ProductionLogDto[] = [
+  {
+    id: 1,
+    recordUid: 'LOG-20261028-0915-01',
+    timeStr: '09:15',
+    workDate: '2026-10-28',
+    shiftType: 'Ca 1 (06:00-14:00)',
+    startTime: '06:00',
+    endTime: '14:00',
+    overtimeMinutes: 0,
+    isSunday: 0,
+    isLightsOut: 0,
+    workerId: 'NV00053',
+    workerName: 'Hoàng Ngọc Hà',
+    machineId: 'M01',
+    machineName: 'Máy tiện OKUMA',
+    machineMode: 'SECOND',
+    poId: 'P0485-01',
+    spId: 'SP050',
+    customer: 'Win-Win',
+    productName: 'ALKTOP 1342 M',
+    ncId: 'NC098',
+    opName: 'G/c hoàn thiện',
+    stage: '1',
+    stepOrder: 1,
+    isFinalOp: 0,
+    stdSeconds: 480,
+    okQty: 63,
+    reworkQty: 0,
+    scrapQty: 0,
+    defectType: '',
+    damageValue: 0,
+    stopMinutes: 0,
+    stopReason: '',
+    toolCode: 'T03',
+    edgesUsed: 13.86,
+    selfCheckOk: 1,
+    qcStatus: 'PASSED',
+    pieceWage: 157500,
+    otBonusWage: 0,
+    waitWage: 0,
+    mealAllowance: 0,
+    scrapPenalty: 0,
+    income: 157500,
+    directPieceIncome: 157500,
+    batchCost: 157500,
+    kpiPct: 105,
+    kpiStatus: 'PASSED',
+    photoUrl: '',
+    handoverNote: '',
+    materialLot: 'LOT-VICO-2610-001',
+    isVoided: 0,
+    note: '',
+    createdAt: '2026-10-28 09:15:00',
+  },
+  {
+    id: 2,
+    recordUid: 'LOG-20261025-2332-01',
+    timeStr: '23:32',
+    workDate: '2026-10-25',
+    shiftType: 'Ca 1 (06:00-14:00)',
+    startTime: '06:00',
+    endTime: '14:00',
+    overtimeMinutes: 0,
+    isSunday: 1,
+    isLightsOut: 0,
+    workerId: 'NV00053',
+    workerName: 'Hoàng Ngọc Hà',
+    machineId: 'M09',
+    machineName: 'Máy phay OKK1',
+    machineMode: 'FIRST',
+    poId: 'PO-THEO-KH',
+    spId: 'SP329',
+    customer: 'Hùng HD - XM Hoàng Thạch',
+    productName: 'TL XL 93A',
+    ncId: 'NC622',
+    opName: 'G/c phay Mp ht (End)',
+    stage: 'End',
+    stepOrder: 1,
+    isFinalOp: 1,
+    stdSeconds: 2400,
+    okQty: 11,
+    reworkQty: 1,
+    scrapQty: 0,
+    defectType: 'Lệch tâm 0.03mm',
+    damageValue: 0,
+    stopMinutes: 0,
+    stopReason: '',
+    toolCode: 'T04',
+    edgesUsed: 2,
+    selfCheckOk: 1,
+    qcStatus: 'PASSED',
+    pieceWage: 110000,
+    otBonusWage: 0,
+    waitWage: 0,
+    mealAllowance: 30000,
+    scrapPenalty: 0,
+    income: 140000,
+    directPieceIncome: 110000,
+    batchCost: 110000,
+    kpiPct: 92,
+    kpiStatus: 'PASSED',
+    photoUrl: '',
+    handoverNote: 'Dao phay mặt mới thay cạnh số 2, chạy êm.',
+    materialLot: 'LOT-VICO-2610-002',
+    isVoided: 0,
+    note: '',
+    createdAt: '2026-10-28 09:15:00',
+  },
+  {
+    id: 3,
+    recordUid: 'LOG-20261027-1609-01',
+    timeStr: '16:09',
+    workDate: '2026-10-27',
+    shiftType: 'Ca 1 (06:00-14:00)',
+    startTime: '06:00',
+    endTime: '14:00',
+    overtimeMinutes: 0,
+    isSunday: 0,
+    isLightsOut: 0,
+    workerId: 'NV00053',
+    workerName: 'Hoàng Ngọc Hà',
+    machineId: 'M05',
+    machineName: 'Máy tiện FUJI',
+    machineMode: 'FIRST',
+    poId: 'PO-THEO-KH',
+    spId: 'SP250',
+    customer: 'Taniguchi',
+    productName: 'Búa đập loại máy nghiền đứng VHC-111 theo bv: VHC-20102',
+    ncId: 'NC158',
+    opName: 'G/c làm định vị',
+    stage: '1',
+    stepOrder: 1,
+    isFinalOp: 0,
+    stdSeconds: 3600,
+    okQty: 8,
+    reworkQty: 0,
+    scrapQty: 0,
+    defectType: '',
+    damageValue: 0,
+    stopMinutes: 0,
+    stopReason: '',
+    toolCode: 'T01',
+    edgesUsed: 1.5,
+    selfCheckOk: 1,
+    qcStatus: 'PASSED',
+    pieceWage: 120000,
+    otBonusWage: 0,
+    waitWage: 0,
+    mealAllowance: 0,
+    scrapPenalty: 0,
+    income: 120000,
+    directPieceIncome: 120000,
+    batchCost: 120000,
+    kpiPct: 100,
+    kpiStatus: 'PASSED',
+    photoUrl: '',
+    handoverNote: 'Gá kẹp chuẩn đồng tâm <0.02mm, chú ý phôi cuộn ở lỗ định vị.',
+    materialLot: 'LOT-VICO-2610-003',
+    isVoided: 0,
+    note: '',
+    createdAt: '2026-10-28 09:15:00',
+  },
+];
+
+// ==================== SAMPLE QC INSPECTIONS ====================
+export const sampleQcInspections: QcInspectionDto[] = [
+  {
+    id: 1,
+    inspectionType: 'FAI',
+    poId: 'PO485-01',
+    spId: 'SP050',
+    ncId: 'NC098',
+    productName: 'ALKTOP 1342 M',
+    opName: 'G/c hoàn thiện',
+    machineName: 'Máy Tiện CNC 1',
+    operatorId: 'NV00053',
+    inspectorId: 'NV_KT02',
+    inspectorName: 'Nguyễn Văn Duy (NV_KT02)',
+    result: 'PASS',
+    sampleSize: 1,
+    defectQty: 0,
+    measuredDimsJson: JSON.stringify({ d1: 134.2, d2: 85.0, ra: 1.6 }),
+    rootCause: '',
+    correctiveAction: 'Đạt chuẩn chi tiết đầu tiên (FAI), cho phép chạy loạt',
+    createdAt: '2026-10-27 08:05:19',
+  },
+  {
+    id: 2,
+    inspectionType: 'FAI',
+    poId: 'PO485-02',
+    spId: 'SP062',
+    ncId: 'NC103',
+    productName: 'ALKTOP 2155 H',
+    opName: 'G/c tiện hoàn thiện',
+    machineName: 'Máy Tiện CNC 1',
+    operatorId: 'NV00214',
+    inspectorId: 'NV_KT02',
+    inspectorName: 'Nguyễn Văn Duy (NV_KT02)',
+    result: 'PASS',
+    sampleSize: 1,
+    defectQty: 0,
+    measuredDimsJson: JSON.stringify({ d1: 215.5, d2: 110.0, ra: 1.6 }),
+    rootCause: '',
+    correctiveAction: 'Đạt chuẩn chi tiết đầu tiên (FAI), cho phép chạy loạt',
+    createdAt: '2026-10-27 10:15:00',
+  },
+  {
+    id: 3,
+    inspectionType: 'FAI',
+    poId: 'PO486-01',
+    spId: 'SP056',
+    ncId: 'NC096',
+    productName: 'ALKTOP 1135 M',
+    opName: 'G/c hoàn thiện',
+    machineName: 'Máy Tiện CNC 2',
+    operatorId: 'NV00216',
+    inspectorId: 'NV_KT02',
+    inspectorName: 'Nguyễn Văn Duy (NV_KT02)',
+    result: 'PASS',
+    sampleSize: 1,
+    defectQty: 0,
+    measuredDimsJson: JSON.stringify({ d1: 113.5, ra: 1.6 }),
+    rootCause: '',
+    correctiveAction: 'Đạt chuẩn FAI',
+    createdAt: '2026-10-27 14:20:00',
+  },
+  {
+    id: 4,
+    inspectionType: 'FAI',
+    poId: 'PO480-01',
+    spId: 'SP030',
+    ncId: 'NC047',
+    productName: 'ISHIZUE 318Dw650',
+    opName: 'G/c tiện hoàn thiện',
+    machineName: 'Máy Tiện CNC 1',
+    operatorId: 'NV00218',
+    inspectorId: 'NV_KT02',
+    inspectorName: 'Nguyễn Văn Duy (NV_KT02)',
+    result: 'PASS',
+    sampleSize: 1,
+    defectQty: 0,
+    measuredDimsJson: JSON.stringify({ d1: 318.0, l: 650.0 }),
+    rootCause: '',
+    correctiveAction: 'Đạt chuẩn chi tiết đầu tiên',
+    createdAt: '2026-10-27 16:45:00',
+  },
+  {
+    id: 5,
+    inspectionType: 'FAI',
+    poId: 'DH-388',
+    spId: 'SP329',
+    ncId: 'NC622',
+    productName: 'TL XL 93A',
+    opName: 'G/c phay Mp ht',
+    machineName: 'Máy phay OKK1',
+    operatorId: 'NV00053',
+    inspectorId: 'NV_KT02',
+    inspectorName: 'Nguyễn Văn Duy (NV_KT02)',
+    result: 'PASS',
+    sampleSize: 1,
+    defectQty: 0,
+    measuredDimsJson: JSON.stringify({ d1: 93.0 }),
+    rootCause: '',
+    correctiveAction: 'Đạt chuẩn FAI',
+    createdAt: '2026-10-28 08:30:00',
+  },
+];
+
+// ==================== SAMPLE DAILY PLAN 54 ROWS ====================
+export function generateSampleDailyRows(workDate: string = '2026-10-21'): DailyPlanRow[] {
+  const workers = getStaticWorkers();
+  const rows: DailyPlanRow[] = [];
+  let stt = 1;
+
+  for (const w of workers) {
+    const isManager = w.id === 'NV00053';
+    const shiftType = isManager ? 'Ca Hành chính' : 'Ca 2';
+
+    // Row 1
+    rows.push({
+      id: stt,
+      workDate,
+      shiftType,
+      stt: stt++,
+      workerName: w.name,
+      customer: 'Win-Win',
+      spId: 'SP050',
+      productName: 'ALKTOP 1342 M',
+      ncId: 'NC098',
+      opName: 'G/c hoàn thiện',
+      plannedQty: 24,
+      machineName: isManager ? 'Máy tiện OKUMA' : 'Máy Tiện CNC 1',
+      note: 'Ưu tiên đơn hàng Win-Win',
+      actualQty: 24,
+      status: 'COMPLETED',
+    });
+
+    // Row 2
+    rows.push({
+      id: stt,
+      workDate,
+      shiftType,
+      stt: stt++,
+      workerName: w.name,
+      customer: 'Win-Win',
+      spId: 'SP062',
+      productName: 'ALKTOP 2155 H',
+      ncId: 'NC103',
+      opName: 'G/c tiện hoàn thiện',
+      plannedQty: 18,
+      machineName: isManager ? 'Máy Tiện CNC 1' : 'Máy Tiện CNC 2',
+      note: 'Gá kẹp chuẩn đồng tâm',
+      actualQty: 16,
+      status: 'IN_PROGRESS',
+    });
+
+    // Row 3
+    rows.push({
+      id: stt,
+      workDate,
+      shiftType,
+      stt: stt++,
+      workerName: w.name,
+      customer: 'Hùng HD - XM Hoàng Thạch',
+      spId: 'SP329',
+      productName: 'TL XL 93A',
+      ncId: 'NC622',
+      opName: 'G/c phay Mp ht',
+      plannedQty: 12,
+      machineName: 'Máy phay OKK1',
+      note: 'Thay dao mới chạy êm',
+      actualQty: 0,
+      status: 'PLANNED',
+    });
+  }
+
+  return rows;
 }
 
 // ==================== ATTENDANCE & PAYROLL 3P ====================
@@ -306,7 +814,6 @@ export function getStaticJobTraveler(poId: string): JobTravelerDto {
 
   const targetProd = normalizeProductName(rawPo.productName);
 
-  // Find matching operations for this specific product
   const allOps: any[] = seed.operations || [];
   const matchedOps = allOps.filter((o: any) => {
     if (o.spId && rawPo.spId && o.spId === rawPo.spId) return true;
@@ -316,7 +823,6 @@ export function getStaticJobTraveler(poId: string): JobTravelerDto {
     return false;
   });
 
-  // Fallback to sample operations if product not declared in operations table
   const opsList =
     matchedOps.length > 0
       ? matchedOps
@@ -324,7 +830,6 @@ export function getStaticJobTraveler(poId: string): JobTravelerDto {
 
   const totalSteps = opsList.length;
 
-  // Find product and spId in costingList
   const costingList: any[] = seed.costingList || [];
   const matchCosting = costingList.find(
     (c: any) => normalizeProductName(c.productName) === targetProd
@@ -436,7 +941,9 @@ export function getStaticTraceability(poId: string): TraceabilityDto {
       totalOk: op.doneOkQty || 0,
       totalRework: 0,
       totalScrap: 0,
-      logs: [],
+      logs: sampleProductionLogs.filter(
+        (l) => l.poId === traveler.po.poId && l.ncId === op.ncId
+      ),
     })),
     qcRecords: traveler.faiRecords,
     deliveries: [],
@@ -448,7 +955,7 @@ export function getStaticSchedules(): {
   schedules: ScheduleBlock[];
   loads: MachineLoadSummary[];
 } {
-  const schedules: ScheduleBlock[] = getStoredJson('GCCK_SCHEDULES', seed.schedules || []);
+  const schedules: ScheduleBlock[] = getStoredJson('GCCK_SCHEDULES', sampleSchedules);
   const machines: MachineInfo[] = seed.machines || [];
   const orders: PurchaseOrderInfo[] = getStaticOrders().items;
   const ops: OperationMeta[] = seed.operations || [];
@@ -752,6 +1259,7 @@ export function handleStaticMockApi(
     };
 
     const orders = getStaticOrders().items;
+    const schedData = getStaticSchedules();
 
     return {
       user,
@@ -760,27 +1268,27 @@ export function handleStaticMockApi(
       isSundayToday: isSunday,
       workers,
       machines: seed.machines || [],
-      toolsList: seed.toolsList || [],
+      toolsList: (seed.toolsList || []) as CuttingTool[],
       products: getStaticProducts(),
       operations: seed.operations || [],
       ordersList: orders,
-      schedules: [],
-      machineLoads: [],
-      qcInspections: [],
-      recentLogs: seed.recentLogs || [],
-      todayAccumulated: seed.todayAccumulated || {},
-      opDoneMap: seed.opDoneMap || {},
+      schedules: schedData.schedules,
+      machineLoads: schedData.loads,
+      qcInspections: sampleQcInspections,
+      recentLogs: sampleProductionLogs,
+      todayAccumulated: { NV00053: 157500 },
+      opDoneMap: seed.opDoneMap || { NC098: 63, NC622: 11, NC158: 8 },
       kpiSummary: {
-        totalOk: Number(seed.kpiSummary?.totalOk || 82),
-        totalRework: Number(seed.kpiSummary?.totalRework || 1),
-        totalScrap: Number(seed.kpiSummary?.totalScrap || 0),
+        totalOk: 82,
+        totalRework: 1,
+        totalScrap: 0,
         totalStopMinutes: 0,
         runningMachines: 11,
         bottleneckMachines: 6,
         openOrders: orders.length,
         overdueOrders: 124,
       },
-      shiftHandoverAlerts: [],
+      shiftHandoverAlerts: sampleHandoverAlerts,
       config: {
         AUTH_MODE: 'DEMO_QUICK',
         TELEGRAM_BOT_USERNAME: 'gcck_sanluong_2026_bot',
@@ -857,31 +1365,56 @@ export function handleStaticMockApi(
     return { success: true };
   }
 
+  // Traceability & Job Traveler
+  if (norm.includes('/traceability') && method === 'GET') {
+    const match = /(orders\/([^/]+)\/traceability|traceability\/([^/]+))/.exec(norm);
+    const poId = decodeURIComponent(match?.[2] || match?.[3] || 'PO485-01');
+    return getStaticTraceability(poId);
+  }
+
   const travelerMatch = /^\/(orders\/([^/]+)\/traveler|job-traveler\/([^/]+))$/.exec(norm);
   if (travelerMatch && method === 'GET') {
     const poId = decodeURIComponent(travelerMatch[2] || travelerMatch[3]);
     return getStaticJobTraveler(poId);
   }
 
-  const traceMatch = /^\/traceability\/([^/]+)$/.exec(norm);
-  if (traceMatch && method === 'GET') {
-    const poId = decodeURIComponent(traceMatch[1]);
-    return getStaticTraceability(poId);
+  // Schedules & Loads
+  if (norm.includes('/daily-dates') || norm.includes('/daily/dates')) {
+    const dates: DailyDateMeta[] = [
+      { workDate: '2026-10-21', rowCount: 54, workerCount: 18 },
+      { workDate: '2026-10-27', rowCount: 54, workerCount: 18 },
+      { workDate: '2026-10-28', rowCount: 54, workerCount: 18 },
+    ];
+    return { success: true, dates };
   }
 
-  // Schedules & Loads
+  if (norm.includes('/schedules/daily') && method === 'GET') {
+    const urlParams = new URLSearchParams(norm.split('?')[1] || '');
+    const date = urlParams.get('date') || '2026-10-21';
+    const rows = getStoredJson<DailyPlanRow[]>(
+      `GCCK_DAILY_PLAN_${date}`,
+      generateSampleDailyRows(date)
+    );
+    return { success: true, workDate: date, rows };
+  }
+
+  if (norm.includes('/schedules/daily') && method === 'POST') {
+    const date = json?.workDate || json?.date || '2026-10-21';
+    const rows = json?.rows || [];
+    setStoredJson(`GCCK_DAILY_PLAN_${date}`, rows);
+    return { success: true, workDate: date, rowCount: rows.length };
+  }
+
+  if (norm.includes('/schedules/daily') && method === 'DELETE') {
+    return { success: true };
+  }
+
   if (norm.startsWith('/schedules') && method === 'GET') {
-    if (norm.includes('/daily/dates') || norm.includes('/daily-dates')) {
-      return { success: true, dates: [] as DailyDateMeta[] };
-    }
-    if (norm.includes('/daily')) {
-      return { success: true, rows: [] as DailyPlanRow[] };
-    }
     return getStaticSchedules();
   }
 
   if (norm === '/schedules' && method === 'POST') {
-    const schedules = getStoredJson<ScheduleBlock[]>('GCCK_SCHEDULES', []);
+    const schedules = getStoredJson<ScheduleBlock[]>('GCCK_SCHEDULES', sampleSchedules);
     const newSb: ScheduleBlock = {
       ...json,
       id: Date.now(),
@@ -911,7 +1444,7 @@ export function handleStaticMockApi(
 
   // Logs & QC
   if (norm.startsWith('/logs') && method === 'GET') {
-    return { items: getStoredJson('GCCK_LOGS', seed.recentLogs || []) };
+    return { items: getStoredJson('GCCK_LOGS', sampleProductionLogs) };
   }
 
   if (norm.startsWith('/logs/') && method === 'PATCH') {
@@ -919,11 +1452,11 @@ export function handleStaticMockApi(
   }
 
   if (norm === '/qc' && method === 'GET') {
-    return { items: getStoredJson('GCCK_QC', []) };
+    return { items: getStoredJson('GCCK_QC', sampleQcInspections) };
   }
 
   if (norm === '/qc' && method === 'POST') {
-    const qcList = getStoredJson<QcInspectionDto[]>('GCCK_QC', []);
+    const qcList = getStoredJson<QcInspectionDto[]>('GCCK_QC', sampleQcInspections);
     const newQc: QcInspectionDto = {
       ...json,
       id: Date.now(),
