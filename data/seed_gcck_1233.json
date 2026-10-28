@@ -22630,7 +22630,7 @@
       ]
     },
     {
-      "empId": "NV_KT01",
+      "empId": "NV00101",
       "name": "Đinh Văn Thiên",
       "workType": "Công",
       "defaultShift": "Ca 1",
@@ -22680,7 +22680,7 @@
       ]
     },
     {
-      "empId": "NV_KT02",
+      "empId": "NV00102",
       "name": "Nguyễn Văn Duy",
       "workType": "Công",
       "defaultShift": "Ca 1",
@@ -22730,7 +22730,7 @@
       ]
     },
     {
-      "empId": "NV_KT03",
+      "empId": "NV00103",
       "name": "Lê Trung Hải",
       "workType": "Công",
       "defaultShift": "Ca 1",
