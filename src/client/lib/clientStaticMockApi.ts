@@ -797,9 +797,40 @@ function normalizeProductName(name: string): string {
 }
 
 export function getStaticOrders(): { items: PurchaseOrderInfo[]; deliveries: any[] } {
-  const orders: PurchaseOrderInfo[] = getStoredJson('GCCK_ORDERS', seed.ordersList || []);
+  const rawOrders: any[] = getStoredJson('GCCK_ORDERS', seed.ordersList || []);
+  const qcList = getStoredJson<QcInspectionDto[]>('GCCK_QC', sampleQcInspections);
+
+  const faiMap = new Map<string, string>();
+  for (const f of qcList) {
+    if (f.inspectionType === 'FAI' && !faiMap.has(f.poId)) {
+      faiMap.set(normalizePoId(f.poId), f.result);
+    }
+  }
+
+  const items: PurchaseOrderInfo[] = rawOrders.map((o) => {
+    const qtyPo = Number(o.qtyPo || 0);
+    const normId = normalizePoId(o.poId);
+    const faiRes = faiMap.get(normId);
+
+    let faiStatus: any = 'NOT_REQUIRED';
+    if (qtyPo >= 5) {
+      if (faiRes === 'PASS' || faiRes === 'CONCESSION') {
+        faiStatus = 'FAI_PASSED';
+      } else if (faiRes === 'SCRAP' || faiRes === 'REWORK') {
+        faiStatus = 'FAI_FAILED';
+      } else {
+        faiStatus = 'PENDING_FAI';
+      }
+    }
+
+    return {
+      ...o,
+      faiStatus,
+    };
+  });
+
   return {
-    items: orders,
+    items,
     deliveries: [],
   };
 }

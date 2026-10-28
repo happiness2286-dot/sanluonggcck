@@ -74,7 +74,7 @@ export function getStaticFallbackBootstrap(selectedWorkerId?: string): Bootstrap
     toolsList: seed.toolsList || [],
     products: Array.from(productMap.values()),
     operations: (seed.operations || []) as OperationMeta[],
-    ordersList: seed.ordersList || [],
+    ordersList: (handleStaticMockApi('/orders', 'GET') as any)?.items || [],
     schedules: (handleStaticMockApi('/schedules', 'GET') as any)?.schedules || [],
     machineLoads: (handleStaticMockApi('/schedules', 'GET') as any)?.loads || [],
     qcInspections: (handleStaticMockApi('/qc', 'GET') as any)?.items || [],
