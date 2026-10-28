@@ -8,6 +8,7 @@ import type {
 } from '@shared/types';
 import { apiClient, setStoredAuthToken } from '../lib/apiClient';
 import { Button, Modal, useToast } from '../components/ui/IndustrialPrimitives';
+import { normalizePath } from '../lib/navigation';
 
 interface AuthContextValue {
   user: AuthSessionUser | null;
@@ -58,8 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(sess.user);
       } else if (sess.authMode === 'DEMO_QUICK') {
         // Zero-friction automatic role bootstrap based on entry URL
-        const path = typeof window !== 'undefined' ? window.location.pathname : '/worker';
-        if (path.startsWith('/admin')) {
+        const rawPath = typeof window !== 'undefined' ? window.location.pathname : '/worker';
+        const path = normalizePath(rawPath);
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1280;
+        if (path.startsWith('/admin') || (path === '/' && isDesktop)) {
           await quickSwitch({ workerId: 'NV00053' });
         } else if (!path.startsWith('/andon')) {
           await quickSwitch({ workerId: 'NV00214' });

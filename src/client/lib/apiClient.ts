@@ -81,6 +81,22 @@ export async function apiFetch<T = any>(
     if (path.includes('/auth/session')) {
       return getStaticFallbackSession() as T;
     }
+    if (path.includes('/auth/login')) {
+      let targetWorkerId = 'NV00053';
+      try {
+        if (json && typeof json === 'object') {
+          targetWorkerId = String((json as any).workerId || (json as any).username || targetWorkerId);
+        }
+      } catch {
+        // use default
+      }
+      const sess = getStaticFallbackSession(targetWorkerId);
+      return {
+        token: `offline-${targetWorkerId}`,
+        user: sess.user,
+        authMode: 'DEMO_QUICK',
+      } as T;
+    }
     if (path.includes('/auth/quick-switch')) {
       let targetWorkerId = 'NV00214';
       try {
@@ -96,6 +112,12 @@ export async function apiFetch<T = any>(
         user: sess.user,
         authMode: 'DEMO_QUICK',
       } as T;
+    }
+    if (path.includes('/auth/logout')) {
+      return { success: true } as T;
+    }
+    if (path.includes('/auth/telegram-link')) {
+      return { success: true, message: 'Đã liên kết Telegram thành công' } as T;
     }
     return null;
   };
