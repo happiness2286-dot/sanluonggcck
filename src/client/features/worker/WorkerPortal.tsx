@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
-  Building2,
   Camera,
   CheckCircle2,
   ChevronDown,
@@ -29,6 +28,8 @@ import {
   RotateCcw,
   Search,
   ShieldCheck,
+  BookOpen,
+  Building2,
   Sparkles,
   Star,
   Timer,
@@ -72,6 +73,7 @@ import {
 import { Badge, Button, Card, useToast } from '../../components/ui/IndustrialPrimitives';
 import { QrScannerModal, SampleQrPreset } from './QrScannerModal';
 import { PickerOptionItem, SearchablePickerSheet } from './SearchablePickerSheet';
+import { WorkerGuideModal } from './WorkerGuideModal';
 import { TelegramLinkModal } from './TelegramLinkModal';
 import { FaiInspectionModal } from './FaiInspectionModal';
 import { DrawingViewerModal } from './DrawingViewerModal';
@@ -161,6 +163,8 @@ export function WorkerPortal() {
   const [drawingModalOpen, setDrawingModalOpen] = useState(false);
   const [faiTargetPo, setFaiTargetPo] = useState<PurchaseOrderInfo | null>(null);
   const [activePicker, setActivePicker] = useState<PickerKind>(null);
+  const [guideModalOpen, setGuideModalOpen] = useState(false);
+  const [selectedCustomerFilter, setSelectedCustomerFilter] = useState<string>('ALL');
 
   // Bootstrap & Network State
   const [bootstrap, setBootstrap] = useState<BootstrapPayload | null>(null);
@@ -240,7 +244,6 @@ export function WorkerPortal() {
   const [submittingReport, setSubmittingReport] = useState<boolean>(false);
   const [ordersFilter, setOrdersFilter] = useState<'ALL' | 'PENDING_FAI' | 'SCHEDULE'>('ALL');
   const [ordersSearch, setOrdersSearch] = useState<string>('');
-  const [selectedCustomerFilter, setSelectedCustomerFilter] = useState<string>('ALL');
   const initializedSelectionRef = useRef<boolean>(false);
 
   // Subscribe online/offline & outbox
@@ -369,21 +372,21 @@ export function WorkerPortal() {
 
   const ordersList = bootstrap?.ordersList ?? [];
   const productsList = bootstrap?.products ?? [];
-
-  const customerListWithCounts = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const p of productsList) {
-      const cust = p.customer || 'Khác';
-      map.set(cust, (map.get(cust) || 0) + 1);
-    }
-    return Array.from(map.entries())
-      .map(([customer, count]) => ({ customer, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [productsList]);
   const operationsList = bootstrap?.operations ?? [];
   const machinesList = bootstrap?.machines ?? [];
   const toolsList = bootstrap?.toolsList ?? [];
   const schedulesList = bootstrap?.schedules ?? [];
+
+  const customerStats = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of productsList) {
+      const c = (p.customer || 'Khách lẻ').trim();
+      counts.set(c, (counts.get(c) || 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([customer, count]) => ({ customer, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [productsList]);
 
   const selectedPo = useMemo(
     () =>
@@ -773,42 +776,28 @@ export function WorkerPortal() {
     }
 
     if (activePicker === 'PRODUCT') {
-      const filteredProds = selectedCustomerFilter === 'ALL'
-        ? productsList
-        : productsList.filter((p) => (p.customer || 'Khác') === selectedCustomerFilter);
-
-      const opts: PickerOptionItem[] = filteredProds.map((prod) => ({
+      const opts: PickerOptionItem[] = productsList.map((prod) => ({
         id: prod.spId,
         primaryText: prod.productName,
         secondaryText: `Khách hàng: ${prod.customer} · Vật liệu: ${prod.matName || 'Thép CK'} · ${prod.opCount || 1} nguyên công`,
+        category: prod.customer,
         metaBadge: prod.spId,
         metaVariant: 'sky',
         rightText: prod.opsSummary || '',
         searchKeywords: `${prod.spId} ${prod.customer} ${prod.productName} ${prod.matName || ''}`,
       }));
-
-      const filterTabs = {
-        title: 'CHỌN KHÁCH HÀNG NHANH (CHẠM ĐỂ XEM SP):',
-        activeTabId: selectedCustomerFilter,
-        onSelectTab: (tabId: string) => setSelectedCustomerFilter(tabId),
-        tabs: [
-          { id: 'ALL', label: 'Tất cả', count: productsList.length },
-          ...customerListWithCounts.map((c) => ({
-            id: c.customer,
-            label: c.customer,
-            count: c.count,
-          })),
-        ],
-      };
-
       return {
         title: 'Chọn Sản Phẩm / Bản Vẽ Chi Tiết',
-        subtitle: selectedCustomerFilter === 'ALL'
-          ? `Hiển thị đầy đủ ${productsList.length} bản vẽ chi tiết (không cắt chữ)`
-          : `Đang lọc ${filteredProds.length} sản phẩm của khách hàng [${selectedCustomerFilter}]`,
+        subtitle: `Hiển thị đầy đủ ${productsList.length} bản vẽ chi tiết (không cắt chữ)`,
         options: opts,
         selectedId: selectedProduct?.spId || selectedSpId,
-        filterTabs,
+        categoryChips: [
+          { label: 'Tất cả KH', value: 'ALL', count: productsList.length },
+          ...customerStats.map((c) => ({ label: c.customer, value: c.customer, count: c.count })),
+        ],
+        categoryTitle: 'Lọc nhanh theo Khách hàng:',
+        activeCategory: selectedCustomerFilter,
+        onCategoryChange: (cat: string) => setSelectedCustomerFilter(cat),
         onSelect: (spId: string) => {
           setSelectedSpId(spId);
           const firstOp = operationsList
@@ -843,6 +832,7 @@ export function WorkerPortal() {
           id: op.ncId,
           primaryText: `${op.opName} — ${op.productName}`,
           secondaryText: `KH: ${op.customer} · Máy: ${op.defaultMachine} · Dao: ${op.toolCode || '—'} · Vật liệu: ${op.matName || '—'}`,
+          category: op.customer,
           metaBadge: `${op.ncId} · Bước ${op.stepOrder}${op.isFinalOp === 1 ? ' [END]' : ' [WIP]'}`,
           metaVariant: (op.spId === curSp
             ? op.isFinalOp === 1
@@ -858,6 +848,13 @@ export function WorkerPortal() {
         subtitle: 'Ưu tiên nguyên công thuộc bản vẽ đang chọn lên đầu danh sách',
         options: opts,
         selectedId: selectedNcId,
+        categoryChips: [
+          { label: 'Tất cả NC', value: 'ALL', count: operationsList.length },
+          ...customerStats.map((c) => ({ label: c.customer, value: c.customer })),
+        ],
+        categoryTitle: 'Lọc nguyên công theo Khách hàng:',
+        activeCategory: selectedCustomerFilter,
+        onCategoryChange: (cat: string) => setSelectedCustomerFilter(cat),
         onSelect: (ncId: string) => {
           if (ncId === 'NC_STOP') {
             setSelectedNcId('NC_STOP');
@@ -1268,21 +1265,35 @@ export function WorkerPortal() {
         {/* ==================== TAB 1: ⚡ BÁO CÁO SẢN XUẤT ==================== */}
         {activeTab === 'REPORT' && (
           <>
-            {/* 1. Hero QR Scan Button + Fast Search */}
+            {/* 1. Hero QR Scan Button + Fast Search + 8-Step Guide + Quick Customer Filter */}
             <Card className="space-y-2.5 border-slate-200 bg-white p-3 sm:p-4">
-              <button
-                type="button"
-                onClick={() => setQrModalOpen(true)}
-                className="flex min-h-[56px] w-full min-w-0 items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-black tracking-wide text-white shadow-md shadow-blue-600/20 transition-all hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] sm:text-base"
-              >
-                <QrCode className="h-6 w-6 shrink-0" />
-                <span className="truncate">QUÉT MÃ QR PHIẾU CÔNG NGHỆ</span>
-              </button>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setQrModalOpen(true)}
+                  className="flex min-h-[52px] w-full min-w-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2 text-sm font-black tracking-wide text-white shadow-md shadow-blue-600/20 transition-all hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99]"
+                >
+                  <QrCode className="h-5 w-5 shrink-0" />
+                  <span className="truncate">QUÉT MÃ QR PHIẾU</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setGuideModalOpen(true)}
+                  className="flex min-h-[52px] w-full min-w-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-3 py-2 text-sm font-black tracking-wide text-white shadow-md shadow-orange-500/20 transition-all hover:from-amber-600 hover:to-orange-700 active:scale-[0.99]"
+                >
+                  <BookOpen className="h-5 w-5 shrink-0" />
+                  <span className="truncate">📖 HƯỚNG DẪN 8 BƯỚC (VIDEO 10S)</span>
+                </button>
+              </div>
 
               <button
                 type="button"
-                onClick={() => setActivePicker('OPERATION')}
-                className="flex min-h-[48px] w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-left text-xs font-medium text-slate-700 transition-colors hover:border-blue-400 hover:bg-blue-50/50 hover:text-slate-900"
+                onClick={() => {
+                  setSelectedCustomerFilter('ALL');
+                  setActivePicker('OPERATION');
+                }}
+                className="flex min-h-[46px] w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-left text-xs font-medium text-slate-700 transition-colors hover:border-blue-400 hover:bg-blue-50/50 hover:text-slate-900"
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <Search className="h-4 w-4 shrink-0 text-blue-600" />
@@ -1294,6 +1305,58 @@ export function WorkerPortal() {
                   {operationsList.length} NC
                 </span>
               </button>
+
+              {/* Quick Customer Filter Bar (One-touch customer filtering for workers!) */}
+              <div className="rounded-xl border border-blue-200/90 bg-blue-50/60 p-2.5">
+                <div className="flex items-center justify-between gap-2 pb-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-black uppercase text-blue-900">
+                    <Building2 className="h-3.5 w-3.5 text-blue-600" />
+                    <span>🏢 Chọn Khách Hàng Nhanh (Chạm để xem SP):</span>
+                  </div>
+                  {selectedCustomerFilter !== 'ALL' && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCustomerFilter('ALL')}
+                      className="text-[11px] font-bold text-blue-600 underline hover:text-blue-800"
+                    >
+                      Bỏ lọc
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCustomerFilter('ALL');
+                      setActivePicker('PRODUCT');
+                    }}
+                    className={`min-h-[36px] shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
+                      selectedCustomerFilter === 'ALL'
+                        ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-300'
+                        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    Tất cả ({productsList.length} SP)
+                  </button>
+                  {customerStats.map(({ customer, count }) => (
+                    <button
+                      key={customer}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomerFilter(customer);
+                        setActivePicker('PRODUCT');
+                      }}
+                      className={`min-h-[36px] shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
+                        selectedCustomerFilter === customer
+                          ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-300'
+                          : 'border border-blue-200 bg-white text-blue-900 hover:bg-blue-100/70'
+                      }`}
+                    >
+                      🏢 {customer} ({count})
+                    </button>
+                  ))}
+                </div>
+              </div>
             </Card>
 
             {/* 2. Shift Handover Yellow Alert Banner (Auto-triggers when machine or PO has handoverNote) */}
@@ -1371,62 +1434,6 @@ export function WorkerPortal() {
                   </div>
                   <ChevronRight className="h-5 w-5 shrink-0 text-slate-500" />
                 </button>
-              </div>
-
-              {/* CHỌN KHÁCH HÀNG NHANH (CHẠM ĐỂ XEM SP) */}
-              <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-2.5 sm:p-3 shadow-xs">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide text-blue-900">
-                    <Building2 className="h-4 w-4 text-blue-600 shrink-0" />
-                    <span>CHỌN KHÁCH HÀNG NHANH (CHẠM ĐỂ XEM SP):</span>
-                  </div>
-                  {selectedCustomerFilter !== 'ALL' && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCustomerFilter('ALL')}
-                      className="text-[11px] font-bold text-blue-600 hover:underline"
-                    >
-                      Đặt lại (Hiện tất cả)
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedCustomerFilter('ALL');
-                      setActivePicker('PRODUCT');
-                    }}
-                    className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs transition-colors ${
-                      selectedCustomerFilter === 'ALL'
-                        ? 'bg-blue-600 text-white font-bold shadow-sm'
-                        : 'border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-100'
-                    }`}
-                  >
-                    Tất cả ({productsList.length} SP)
-                  </button>
-                  {customerListWithCounts.map(({ customer, count }) => {
-                    const isSelected = selectedCustomerFilter === customer;
-                    return (
-                      <button
-                        key={customer}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCustomerFilter(customer);
-                          setActivePicker('PRODUCT');
-                        }}
-                        className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs transition-colors ${
-                          isSelected
-                            ? 'bg-blue-600 text-white font-bold shadow-sm'
-                            : 'border border-slate-300 bg-white text-slate-700 font-medium hover:border-blue-400 hover:bg-blue-50/50'
-                        }`}
-                      >
-                        <Building2 className={`h-3.5 w-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-slate-500'}`} />
-                        <span>{customer} ({count})</span>
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
 
               {/* Product Full Multi-line Trigger */}
@@ -2226,7 +2233,7 @@ export function WorkerPortal() {
                         <div className="truncate text-sm font-bold text-slate-900">
                           {selectedTool
                             ? `${selectedTool.code} — ${selectedTool.name} (Tồn: ${selectedTool.stockQty ?? 0})`
-                            : toolCode || `Chọn mã dao cụ (${toolsList.length} mã)...`}
+                            : toolCode || 'Chọn mã dao cụ (63 mã)...'}
                         </div>
                       </div>
                       <ChevronRight className="h-5 w-5 shrink-0 text-slate-500" />
@@ -2868,9 +2875,17 @@ export function WorkerPortal() {
           options={pickerConfig.options}
           selectedId={pickerConfig.selectedId}
           onSelect={pickerConfig.onSelect}
-          filterTabs={(pickerConfig as any).filterTabs}
+          categoryChips={pickerConfig.categoryChips}
+          categoryTitle={pickerConfig.categoryTitle}
+          activeCategory={pickerConfig.activeCategory}
+          onCategoryChange={pickerConfig.onCategoryChange}
         />
       )}
+
+      <WorkerGuideModal
+        open={guideModalOpen}
+        onClose={() => setGuideModalOpen(false)}
+      />
 
       <TelegramLinkModal
         open={telegramModalOpen}

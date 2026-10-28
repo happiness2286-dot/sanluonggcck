@@ -1,12 +1,3 @@
-import {
-  getStaticFallbackBootstrap,
-  getStaticFallbackSession,
-} from './clientBootstrapFallback';
-import {
-  handleStaticMockApi,
-  isStaticDeployment,
-} from './clientStaticMockApi';
-
 export const AUTH_TOKEN_STORAGE_KEY = 'GCCK_SESSION_TOKEN';
 
 export class ApiError extends Error {
@@ -60,17 +51,7 @@ export async function apiFetch<T = any>(
   path: string,
   options: ApiFetchOptions = {}
 ): Promise<T> {
-  const method = (options.method || 'GET').toUpperCase();
-  const { timeoutMs = 12000, json, headers, ...rest } = options;
-
-  // 1. Direct Static Mode: On GitHub Pages / Static hosting, avoid 15s timeout & 404 errors completely
-  if (isStaticDeployment()) {
-    const mockRes = handleStaticMockApi(path, method, json, rest.body);
-    if (mockRes !== null) {
-      return mockRes as T;
-    }
-  }
-
+  const { timeoutMs = 15000, json, headers, ...rest } = options;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
 
@@ -91,7 +72,6 @@ export async function apiFetch<T = any>(
   try {
     const resp = await fetch(resolveApiUrl(path), {
       ...rest,
-      method,
       headers: reqHeaders,
       body,
       credentials: 'include',
@@ -104,9 +84,6 @@ export async function apiFetch<T = any>(
       : await resp.text();
 
     if (!resp.ok) {
-      const fallback = handleStaticMockApi(path, method, json, body);
-      if (fallback !== null) return fallback as T;
-
       const msg =
         (payload && typeof payload === 'object' && 'error' in payload && String((payload as any).error)) ||
         `Lỗi kết nối máy chủ (HTTP ${resp.status})`;
@@ -115,9 +92,6 @@ export async function apiFetch<T = any>(
 
     return payload as T;
   } catch (err: any) {
-    const fallback = handleStaticMockApi(path, method, json, body);
-    if (fallback !== null) return fallback as T;
-
     if (err instanceof ApiError) throw err;
     if (err?.name === 'AbortError') {
       throw new ApiError('Quá thời gian phản hồi từ máy chủ (Timeout).', 0);

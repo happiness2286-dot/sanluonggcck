@@ -1,21 +1,22 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, Check, Search, X } from 'lucide-react';
+import { Check, Search, X, Building2 } from 'lucide-react';
 import { matchesSearch } from '@shared/vnSearch';
+
+export interface PickerCategoryChip {
+  label: string;
+  value: string;
+  count?: number;
+}
 
 export interface PickerOptionItem {
   id: string;
   primaryText: string;
   secondaryText?: string;
+  category?: string;
   metaBadge?: string;
   metaVariant?: 'emerald' | 'sky' | 'amber' | 'red' | 'purple' | 'slate';
   rightText?: string;
   searchKeywords?: string;
-}
-
-export interface PickerFilterTabItem {
-  id: string;
-  label: string;
-  count?: number;
 }
 
 export interface SearchablePickerSheetProps {
@@ -28,12 +29,10 @@ export interface SearchablePickerSheetProps {
   selectedId: string;
   onSelect: (id: string) => void;
   emptyMessage?: string;
-  filterTabs?: {
-    title?: string;
-    tabs: PickerFilterTabItem[];
-    activeTabId: string;
-    onSelectTab: (tabId: string) => void;
-  };
+  categoryChips?: PickerCategoryChip[];
+  categoryTitle?: string;
+  activeCategory?: string;
+  onCategoryChange?: (val: string) => void;
 }
 
 const INITIAL_RENDER_LIMIT = 80;
@@ -48,11 +47,26 @@ export function SearchablePickerSheet({
   selectedId,
   onSelect,
   emptyMessage = 'Không tìm thấy mục phù hợp với từ khóa.',
-  filterTabs,
+  categoryChips,
+  categoryTitle,
+  activeCategory,
+  onCategoryChange,
 }: SearchablePickerSheetProps) {
   const [query, setQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
+  const [internalCategory, setInternalCategory] = useState<string>('ALL');
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const currentCategory = activeCategory !== undefined ? activeCategory : internalCategory;
+
+  const handleSelectCategory = (val: string) => {
+    if (onCategoryChange) {
+      onCategoryChange(val);
+    } else {
+      setInternalCategory(val);
+    }
+    setShowAll(false);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -75,12 +89,22 @@ export function SearchablePickerSheet({
   }, [open, onClose]);
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return options;
-    return options.filter((item) => {
+    let list = options;
+    if (currentCategory && currentCategory !== 'ALL') {
+      list = list.filter((item) => {
+        if (item.category) return item.category.toLowerCase() === currentCategory.toLowerCase();
+        const hay = `${item.secondaryText || ''} ${item.searchKeywords || ''}`.toLowerCase();
+        return hay.includes(currentCategory.toLowerCase());
+      });
+    }
+
+    if (!query.trim()) return list;
+
+    return list.filter((item) => {
       const hay = `${item.id} ${item.primaryText} ${item.secondaryText || ''} ${item.metaBadge || ''} ${item.searchKeywords || ''}`;
       return matchesSearch(hay, query);
     });
-  }, [options, query]);
+  }, [options, query, currentCategory]);
 
   const visibleItems = useMemo(() => {
     if (showAll || filtered.length <= INITIAL_RENDER_LIMIT) return filtered;
@@ -108,10 +132,10 @@ export function SearchablePickerSheet({
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className="flex h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white text-slate-900 shadow-elevated sm:h-[82vh] sm:rounded-2xl"
+        className="flex h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white text-slate-900 shadow-elevated sm:h-[84vh] sm:rounded-2xl"
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 border-b border-slate-200 bg-slate-50/80 px-4 py-3.5">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-200 bg-slate-50/80 px-4 py-3 sm:py-3.5">
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-base font-extrabold text-slate-900">{title}</h3>
             {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
@@ -119,15 +143,15 @@ export function SearchablePickerSheet({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
             aria-label="Đóng danh sách chọn"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Sticky Search Box */}
-        <div className="border-b border-slate-200 bg-white px-3.5 py-2.5">
+        {/* Sticky Search Box & Category Filter */}
+        <div className="border-b border-slate-200 bg-white px-3.5 py-2.5 space-y-2">
           <div className="relative flex items-center">
             <Search className="pointer-events-none absolute left-3.5 h-5 w-5 text-blue-600" />
             <input
@@ -139,7 +163,7 @@ export function SearchablePickerSheet({
                 setShowAll(false);
               }}
               placeholder={searchPlaceholder}
-              className="min-h-[50px] w-full min-w-0 rounded-xl border border-slate-300 bg-slate-50 pl-11 pr-11 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/15"
+              className="min-h-[48px] w-full min-w-0 rounded-xl border border-slate-300 bg-slate-50 pl-11 pr-11 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/15"
             />
             {query && (
               <button
@@ -152,58 +176,56 @@ export function SearchablePickerSheet({
               </button>
             )}
           </div>
-          <div className="mt-1.5 flex items-center justify-between text-[11px] font-medium text-slate-500">
-            <span>Hỗ trợ gõ tiếng Việt không dấu &amp; ký hiệu bản vẽ (&quot;, Φ, #)</span>
+
+          {/* Quick Category Chips (e.g. Filter by Customer) */}
+          {categoryChips && categoryChips.length > 0 && (
+            <div className="space-y-1 pt-0.5">
+              {categoryTitle && (
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
+                  <Building2 className="h-3.5 w-3.5 text-blue-600" />
+                  <span>{categoryTitle}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                {categoryChips.map((chip) => {
+                  const isSelected =
+                    currentCategory.toLowerCase() === chip.value.toLowerCase() ||
+                    (chip.value === 'ALL' && (!currentCategory || currentCategory === 'ALL'));
+                  return (
+                    <button
+                      key={chip.value}
+                      type="button"
+                      onClick={() => handleSelectCategory(chip.value)}
+                      className={`min-h-[34px] shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
+                        isSelected
+                          ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-300'
+                          : 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-300 hover:bg-blue-50/50'
+                      }`}
+                    >
+                      <span>{chip.label}</span>
+                      {chip.count !== undefined && (
+                        <span
+                          className={`ml-1.5 rounded-full px-1.5 py-0.2 font-mono-num text-[10px] ${
+                            isSelected ? 'bg-blue-700 text-white' : 'bg-slate-200/80 text-slate-600'
+                          }`}
+                        >
+                          {chip.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
+            <span>Hỗ trợ tiếng Việt không dấu &amp; ký hiệu (&quot;, Φ, #)</span>
             <span className="font-mono-num font-bold text-blue-700">
               {filtered.length} / {options.length} mục
             </span>
           </div>
         </div>
-
-        {/* Quick Filter Tabs Bar (Chạm để xem SP / PO theo khách hàng) */}
-        {filterTabs && filterTabs.tabs && filterTabs.tabs.length > 0 && (
-          <div className="border-b border-blue-200 bg-blue-50/60 px-3.5 py-2.5">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide text-blue-900">
-                <Building2 className="h-4 w-4 text-blue-600 shrink-0" />
-                <span>{filterTabs.title || 'CHỌN KHÁCH HÀNG NHANH (CHẠM ĐỂ XEM SP):'}</span>
-              </div>
-              {filterTabs.activeTabId !== 'ALL' && (
-                <button
-                  type="button"
-                  onClick={() => filterTabs.onSelectTab('ALL')}
-                  className="text-[11px] font-bold text-blue-600 hover:underline shrink-0"
-                >
-                  Hiện tất cả
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-              {filterTabs.tabs.map((tab) => {
-                const isSelected = filterTabs.activeTabId === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => filterTabs.onSelectTab(tab.id)}
-                    className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs transition-colors ${
-                      isSelected
-                        ? 'bg-blue-600 text-white font-bold shadow-sm'
-                        : 'border border-slate-300 bg-white text-slate-700 font-medium hover:border-blue-400 hover:bg-blue-50/50'
-                    }`}
-                  >
-                    {tab.id !== 'ALL' && (
-                      <Building2 className={`h-3.5 w-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-slate-500'}`} />
-                    )}
-                    <span>
-                      {tab.label} {tab.count !== undefined ? `(${tab.count})` : ''}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Scrollable Multi-line List */}
         <div className="flex-1 space-y-2 overflow-y-auto bg-slate-50/40 p-3">

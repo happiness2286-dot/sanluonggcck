@@ -56,7 +56,7 @@ describe('SQLite WAL Seeder, RBAC Security & Atomic MES REST API', () => {
     expect(boot.status).toBe(200);
 
     // 16 workers loaded, fake CHAT_ID_NV... stripped, colleague salaries hidden
-    expect(boot.body.workers.length).toBeGreaterThanOrEqual(16);
+    expect(boot.body.workers).toHaveLength(16);
     const selfWorker = boot.body.workers.find((w: any) => w.id === 'NV00214');
     const otherWorker = boot.body.workers.find((w: any) => w.id === 'NV00053');
     expect(selfWorker.costPerSec).toBeCloseTo(13.89, 2);
@@ -71,7 +71,7 @@ describe('SQLite WAL Seeder, RBAC Security & Atomic MES REST API', () => {
     expect(boot.body.products).toHaveLength(334);
     expect(boot.body.products[0].quotedPrice).toBeUndefined();
 
-    // Machines >= 23 including FUJI & OKK1, Tools = 118, Operations = 627, POs = 189
+    // Machines >= 23 including FUJI & OKK1, Tools = 63, Operations = 627, POs = 189
     expect(boot.body.machines.length).toBeGreaterThanOrEqual(23);
     expect(boot.body.machines.some((m: any) => m.name === 'Máy tiện FUJI')).toBe(true);
     expect(boot.body.machines.some((m: any) => m.name === 'Máy phay OKK1')).toBe(true);
@@ -146,7 +146,7 @@ describe('SQLite WAL Seeder, RBAC Security & Atomic MES REST API', () => {
 
     const payRes = await adminAgent.get('/api/v1/payroll/2026-10');
     expect(payRes.status).toBe(200);
-    expect(payRes.body.rows.length).toBeGreaterThanOrEqual(16);
+    expect(payRes.body.rows).toHaveLength(16);
   });
 
   it('processes POST /reports atomically: ignores client-tampered rate, deduplicates recordUid, caps shift meal, and updates PO finishedQty on final op', async () => {

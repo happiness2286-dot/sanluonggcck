@@ -207,32 +207,6 @@
       "isLinked": false,
       "username": "trunghai",
       "pin": "1234"
-    },
-    {
-      "id": "NV00217",
-      "name": "Nguyễn Mạnh Hà",
-      "role": "CN",
-      "title": "Công nhân",
-      "salaryMode": "Khoán 1 + 0.33 máy",
-      "baseSalary": 385000,
-      "costPerSec": 13.37,
-      "chatId": "",
-      "isLinked": false,
-      "username": "manhha",
-      "pin": "1234"
-    },
-    {
-      "id": "NV00220",
-      "name": "Trần Đăng Ninh",
-      "role": "CN",
-      "title": "Công nhân",
-      "salaryMode": "Khoán 1 + 0.33 máy",
-      "baseSalary": 385000,
-      "costPerSec": 13.37,
-      "chatId": "",
-      "isLinked": false,
-      "username": "dangninh",
-      "pin": "1234"
     }
   ],
   "machines": [
@@ -23287,6 +23261,7 @@
     "SECONDS_PER_SHIFT": 28800,
     "SECOND_MACHINE_RATE": 0.33,
     "MEAL_ALLOWANCE_SHIFT_2_3": 20000,
-    "KPI_WARNING_THRESHOLD": 0.85
+    "KPI_WARNING_THRESHOLD": 0.85,
+    "GAS_SYNC_ENABLED": "1"
   }
 }

@@ -1,11 +1,5 @@
-import type {
-  PayrollCalcResult,
-  ProductionLogDto,
-  ReportSubmitPayload,
-  ReportSubmitResponse,
-} from '@shared/types';
+import type { ReportSubmitPayload, ReportSubmitResponse } from '@shared/types';
 import { apiFetch, ApiError } from './apiClient';
-import { submitDirectToGoogleAppsScript } from './clientBootstrapFallback';
 
 const OUTBOX_STORAGE_KEY = 'GCCK_OFFLINE_OUTBOX_V1';
 const OUTBOX_EVENT_NAME = 'gcck:outbox-changed';
@@ -102,16 +96,15 @@ export async function flushOfflineOutbox(): Promise<{ synced: number; remaining:
           timeoutMs: 12000,
         });
         synced++;
-      } catch {
-        // Also attempt direct sync to Google Apps Script as secondary channel
-        const gasOk = await submitDirectToGoogleAppsScript(item.payload);
-        if (gasOk) {
-          synced++;
-        } else {
+      } catch (err: any) {
+        // Keep in queue on network error (status === 0) or 5xx; drop if permanent 400 validation error after 3 tries
+        const isValidationErr = err instanceof ApiError && err.status >= 400 && err.status < 500;
+        const nextAttempts = item.attempts + 1;
+        if (!isValidationErr || nextAttempts < 3) {
           remainingItems.push({
             ...item,
-            attempts: item.attempts + 1,
-            lastError: 'Chờ kết nối mạng',
+            attempts: nextAttempts,
+            lastError: String(err?.message || err),
           });
         }
       }
@@ -141,106 +134,8 @@ export async function submitReportWithOfflineFallback(
     });
     return { queuedOffline: false, response };
   } catch (err: any) {
-    // If backend is down or 404 (e.g. running on GitHub Pages), push directly to Google Apps Script
-    const gasSuccess = await submitDirectToGoogleAppsScript(finalPayload);
-    const queuedItem = enqueueOfflineReport(finalPayload);
-
-    if (gasSuccess) {
-      // Remove from outbox if Google Apps Script already confirmed receipt
-      removeOfflineReport(recordUid);
-
-      const mockLog: Partial<ProductionLogDto> = {
-        id: Date.now(),
-        recordUid,
-        createdAt: new Date().toISOString(),
-        timeStr: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        workDate: finalPayload.workDate || new Date().toISOString().slice(0, 10),
-        shiftType: finalPayload.shiftType || 'Ca 1',
-        startTime: finalPayload.startTime,
-        endTime: finalPayload.endTime,
-        overtimeMinutes: finalPayload.overtimeMinutes || 0,
-        isSunday: finalPayload.isSunday ? 1 : 0,
-        isLightsOut: finalPayload.isLightsOut ? 1 : 0,
-        workerId: finalPayload.workerId || '',
-        workerName: finalPayload.workerId || '',
-        machineId: finalPayload.machineName,
-        machineName: finalPayload.machineName,
-        machineMode: 'FIRST',
-        poId: finalPayload.poId || '',
-        spId: '',
-        customer: 'VICO',
-        productName: '',
-        ncId: finalPayload.ncId,
-        opName: finalPayload.ncId,
-        stage: 'GC',
-        stepOrder: 1,
-        isFinalOp: 1,
-        stdSeconds: 60,
-        okQty: finalPayload.okQty || 0,
-        reworkQty: finalPayload.reworkQty || 0,
-        scrapQty: finalPayload.scrapQty || 0,
-        defectType: finalPayload.defectType || '',
-        damageValue: finalPayload.damageValue || 0,
-        stopMinutes: 0,
-        stopReason: '',
-        toolCode: '',
-        edgesUsed: 0,
-        income: 0,
-        qcStatus: 'PENDING_QC',
-        isVoided: 0,
-      };
-
-      const mockPayroll: Partial<PayrollCalcResult> = {
-        effectiveMachineMode: 'FIRST',
-        machRate: 1,
-        shiftMult: 1,
-        isSunday: false,
-        effectiveOtMinutes: finalPayload.overtimeMinutes || 0,
-        unpaidOtMinutes: 0,
-        effectivePaidStopMinutes: 0,
-        isMonthlyStaff: false,
-        unitPiecePrice: 0,
-        earnedStdSeconds: 0,
-        netWorkSeconds: 28800,
-        basePieceWage: 0,
-        otBonusWage: 0,
-        waitWage: 0,
-        pieceWage: 0,
-        directPieceIncome: 0,
-        mealAllowance: 0,
-        scrapPenalty: 0,
-        turnTotalIncome: 0,
-        costingLaborCost: 0,
-        costingMachCost: 0,
-        costingToolCost: 0,
-        costingScrapLoss: 0,
-        batchCost: 0,
-        kpiPct: 100,
-      };
-
-      try {
-        const storedLogs = JSON.parse(localStorage.getItem('GCCK_LOGS') || '[]');
-        storedLogs.unshift(mockLog);
-        localStorage.setItem('GCCK_LOGS', JSON.stringify(storedLogs));
-      } catch {
-        // ignore
-      }
-
-      return {
-        queuedOffline: false,
-        response: {
-          success: true,
-          deduplicated: false,
-          message: `Đã gửi trực tiếp lên Google Sheet thành công (${recordUid}).`,
-          warnings: [],
-          log: mockLog as ProductionLogDto,
-          payroll: mockPayroll as PayrollCalcResult,
-          todayTotalIncome: 0,
-        },
-      };
-    }
-
-    if (err instanceof ApiError && (err.status === 0 || err.status === 404)) {
+    if (err instanceof ApiError && err.status === 0) {
+      const queuedItem = enqueueOfflineReport(finalPayload);
       return { queuedOffline: true, queuedItem };
     }
     throw err;
