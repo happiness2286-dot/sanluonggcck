@@ -2,6 +2,10 @@ import {
   getStaticFallbackBootstrap,
   getStaticFallbackSession,
 } from './clientBootstrapFallback';
+import {
+  handleStaticMockApi,
+  isStaticDeployment,
+} from './clientStaticMockApi';
 
 export const AUTH_TOKEN_STORAGE_KEY = 'GCCK_SESSION_TOKEN';
 
@@ -56,7 +60,17 @@ export async function apiFetch<T = any>(
   path: string,
   options: ApiFetchOptions = {}
 ): Promise<T> {
-  const { timeoutMs = 15000, json, headers, ...rest } = options;
+  const method = (options.method || 'GET').toUpperCase();
+  const { timeoutMs = 12000, json, headers, ...rest } = options;
+
+  // 1. Direct Static Mode: On GitHub Pages / Static hosting, avoid 15s timeout & 404 errors completely
+  if (isStaticDeployment()) {
+    const mockRes = handleStaticMockApi(path, method, json, rest.body);
+    if (mockRes !== null) {
+      return mockRes as T;
+    }
+  }
+
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
 
@@ -74,57 +88,10 @@ export async function apiFetch<T = any>(
     reqHeaders.set('Content-Type', 'application/json');
   }
 
-  const handleStaticFallback = (): T | null => {
-    if (path.includes('/bootstrap')) {
-      return getStaticFallbackBootstrap() as T;
-    }
-    if (path.includes('/auth/session')) {
-      return getStaticFallbackSession() as T;
-    }
-    if (path.includes('/auth/login')) {
-      let targetWorkerId = 'NV00053';
-      try {
-        if (json && typeof json === 'object') {
-          targetWorkerId = String((json as any).workerId || (json as any).username || targetWorkerId);
-        }
-      } catch {
-        // use default
-      }
-      const sess = getStaticFallbackSession(targetWorkerId);
-      return {
-        token: `offline-${targetWorkerId}`,
-        user: sess.user,
-        authMode: 'DEMO_QUICK',
-      } as T;
-    }
-    if (path.includes('/auth/quick-switch')) {
-      let targetWorkerId = 'NV00214';
-      try {
-        if (json && typeof json === 'object' && 'workerId' in json) {
-          targetWorkerId = String((json as any).workerId);
-        }
-      } catch {
-        // use default
-      }
-      const sess = getStaticFallbackSession(targetWorkerId);
-      return {
-        token: `offline-${targetWorkerId}`,
-        user: sess.user,
-        authMode: 'DEMO_QUICK',
-      } as T;
-    }
-    if (path.includes('/auth/logout')) {
-      return { success: true } as T;
-    }
-    if (path.includes('/auth/telegram-link')) {
-      return { success: true, message: 'Đã liên kết Telegram thành công' } as T;
-    }
-    return null;
-  };
-
   try {
     const resp = await fetch(resolveApiUrl(path), {
       ...rest,
+      method,
       headers: reqHeaders,
       body,
       credentials: 'include',
@@ -137,8 +104,8 @@ export async function apiFetch<T = any>(
       : await resp.text();
 
     if (!resp.ok) {
-      const fallback = handleStaticFallback();
-      if (fallback !== null) return fallback;
+      const fallback = handleStaticMockApi(path, method, json, body);
+      if (fallback !== null) return fallback as T;
 
       const msg =
         (payload && typeof payload === 'object' && 'error' in payload && String((payload as any).error)) ||
@@ -148,8 +115,8 @@ export async function apiFetch<T = any>(
 
     return payload as T;
   } catch (err: any) {
-    const fallback = handleStaticFallback();
-    if (fallback !== null) return fallback;
+    const fallback = handleStaticMockApi(path, method, json, body);
+    if (fallback !== null) return fallback as T;
 
     if (err instanceof ApiError) throw err;
     if (err?.name === 'AbortError') {

@@ -29,3 +29,4 @@ code = code.replace(oldBlock, newBlock);
 
 fs.writeFileSync('src/client/context/AuthContext.tsx', code, 'utf8');
 console.log('AuthContext.tsx updated successfully!');
+
