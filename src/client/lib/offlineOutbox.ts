@@ -218,6 +218,14 @@ export async function submitReportWithOfflineFallback(
         kpiPct: 100,
       };
 
+      try {
+        const storedLogs = JSON.parse(localStorage.getItem('GCCK_LOGS') || '[]');
+        storedLogs.unshift(mockLog);
+        localStorage.setItem('GCCK_LOGS', JSON.stringify(storedLogs));
+      } catch {
+        // ignore
+      }
+
       return {
         queuedOffline: false,
         response: {

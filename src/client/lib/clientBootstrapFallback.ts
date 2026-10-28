@@ -134,22 +134,29 @@ export async function submitDirectToGoogleAppsScript(payload: ReportSubmitPayloa
     const hasOt = Number(payload.overtimeMinutes || 0) > 0;
     const otHours = Math.round((Number(payload.overtimeMinutes || 0) / 60) * 10) / 10;
 
+    const prod = bootstrap.products.find((p) => p.spId === op?.spId || p.productName === op?.productName);
+
     const gasPayload = {
       record_id: payload.recordUid,
       date: payload.workDate || new Date().toISOString().slice(0, 10),
       shift: payload.shiftType || 'Ca 1',
       worker_id: payload.workerId || '',
       worker: worker?.name || payload.workerId || '',
+      customer: op?.customer || prod?.customer || 'Win-Win',
+      product: op?.productName || prod?.productName || payload.poId || 'Sản phẩm gia công',
+      product_code: op?.spId || prod?.spId || '',
       machine: payload.machineName,
       po: payload.poId || '',
-      product: op?.spId || '',
-      product_code: op?.spId || '',
-      op: payload.ncId,
+      op: op?.opName ? (payload.ncId + ' - ' + op.opName) : payload.ncId,
       qty_dat: payload.okQty || 0,
       qty_xuly: payload.reworkQty || 0,
       qty_huy: payload.scrapQty || 0,
-      responsibility: payload.defectType ? `Lỗi: ${payload.defectType}` : 'Không có lỗi',
+      responsibility: payload.defectType ? ('Lỗi: ' + payload.defectType) : 'Không có lỗi',
       scrap_reason: payload.defectType || '',
+      material: payload.toolCode || '',
+      qty_material: payload.edgesUsed || 0,
+      downtime_min: payload.stopMinutes || 0,
+      downtime_note: payload.stopReason || payload.handoverNote || '',
       photos: payload.photoBase64 ? [payload.photoBase64] : [],
       product_photos: [],
       has_overtime: hasOt,

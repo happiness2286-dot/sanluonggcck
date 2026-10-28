@@ -19,6 +19,7 @@ import type {
   PurchaseOrderInfo,
   QcInspectionDto,
   ReportSubmitPayload,
+  ReportSubmitResponse,
   ScheduleBlock,
   ShiftHandoverAlert,
   SyncOutboxItem,
@@ -972,7 +973,7 @@ export function getStaticTraceability(poId: string): TraceabilityDto {
       totalOk: op.doneOkQty || 0,
       totalRework: 0,
       totalScrap: 0,
-      logs: sampleProductionLogs.filter(
+      logs: getStoredJson<ProductionLogDto[]>('GCCK_LOGS', sampleProductionLogs).filter(
         (l) => l.poId === traveler.po.poId && l.ncId === op.ncId
       ),
     })),
@@ -1320,14 +1321,14 @@ export function handleStaticMockApi(
       schedules: schedData.schedules,
       machineLoads: schedData.loads,
       qcInspections: sampleQcInspections,
-      recentLogs: sampleProductionLogs,
-      todayAccumulated: { NV00053: 157500 },
-      opDoneMap: seed.opDoneMap || { NC098: 63, NC622: 11, NC158: 8 },
+      recentLogs: getStoredJson('GCCK_LOGS', sampleProductionLogs),
+      todayAccumulated: getStoredJson('GCCK_TODAY_ACC', { NV00053: 157500 }),
+      opDoneMap: getStoredJson('GCCK_OP_DONE', seed.opDoneMap || { NC098: 63, NC622: 11, NC158: 8 }),
       kpiSummary: {
-        totalOk: 82,
-        totalRework: 1,
-        totalScrap: 0,
-        totalStopMinutes: 0,
+        totalOk: getStoredJson<ProductionLogDto[]>('GCCK_LOGS', sampleProductionLogs).reduce((s, l) => s + (l.okQty || 0), 0),
+        totalRework: getStoredJson<ProductionLogDto[]>('GCCK_LOGS', sampleProductionLogs).reduce((s, l) => s + (l.reworkQty || 0), 0),
+        totalScrap: getStoredJson<ProductionLogDto[]>('GCCK_LOGS', sampleProductionLogs).reduce((s, l) => s + (l.scrapQty || 0), 0),
+        totalStopMinutes: getStoredJson<ProductionLogDto[]>('GCCK_LOGS', sampleProductionLogs).reduce((s, l) => s + (l.stopMinutes || 0), 0),
         runningMachines: 11,
         bottleneckMachines: 6,
         openOrders: orders.length,
@@ -1492,7 +1493,16 @@ export function handleStaticMockApi(
     return { items: getStoredJson('GCCK_LOGS', sampleProductionLogs) };
   }
 
-  if (norm.startsWith('/logs/') && method === 'PATCH') {
+  const logPatchMatch = /^\/logs\/(\d+)$/.exec(norm);
+  if (logPatchMatch && method === 'PATCH') {
+    const logId = Number(logPatchMatch[1]);
+    const logs = getStoredJson<ProductionLogDto[]>('GCCK_LOGS', sampleProductionLogs);
+    const idx = logs.findIndex((l) => l.id === logId);
+    if (idx >= 0) {
+      logs[idx] = { ...logs[idx], ...json };
+      setStoredJson('GCCK_LOGS', logs);
+      return { success: true, item: logs[idx] };
+    }
     return { success: true, item: json };
   }
 
@@ -1582,15 +1592,122 @@ export function handleStaticMockApi(
     return { payroll: calc, warnings: [] };
   }
 
-  if (norm === '/reports/submit' && method === 'POST') {
-    void submitDirectToGoogleAppsScript(json as ReportSubmitPayload);
+  if ((norm === '/reports' || norm === '/reports/submit') && method === 'POST') {
+    const p = json as ReportSubmitPayload;
+    const workers = getStaticWorkers();
+    const worker = workers.find((w) => w.id === p.workerId) || workers[0];
+    const ops = (seed.operations || []) as OperationMeta[];
+    const op = ops.find((o) => o.ncId === p.ncId);
+    const prods = getStaticProducts();
+    const prod = prods.find((x) => x.spId === op?.spId || x.productName === op?.productName);
+
+    const calc = calculateTurnPayroll({
+      workerId: p.workerId || 'NV00053',
+      salaryMode: worker?.salaryMode || 'KHOAN',
+      costPerSec: worker?.costPerSec || 13.89,
+      workDate: p.workDate || new Date().toISOString().slice(0, 10),
+      shiftType: p.shiftType || 'Ca 1',
+      startTime: p.startTime || '06:00',
+      endTime: p.endTime || '14:00',
+      overtimeMinutes: Number(p.overtimeMinutes || 0),
+      machineName: p.machineName || 'Máy Tiện CNC 1',
+      machineMode: p.machineMode || 'FIRST',
+      machineCostPerHour: 50000,
+      stdSeconds: op?.stdSeconds || 120,
+      stdEdgesPerPcs: op?.stdEdgesPerPcs || 1,
+      costPerEdge: 5000,
+      okQty: Number(p.okQty || 0),
+      reworkQty: Number(p.reworkQty || 0),
+      scrapQty: Number(p.scrapQty || 0),
+      stopMinutes: Number(p.stopMinutes || 0),
+    });
+
+    const now = new Date();
+    const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    const newLog: ProductionLogDto = {
+      id: Date.now(),
+      recordUid: p.recordUid || ('REC-' + Date.now()),
+      createdAt: now.toISOString(),
+      timeStr,
+      workDate: p.workDate || now.toISOString().slice(0, 10),
+      shiftType: p.shiftType || 'Ca 1',
+      startTime: p.startTime || '06:00',
+      endTime: p.endTime || '14:00',
+      overtimeMinutes: Number(p.overtimeMinutes || 0),
+      isSunday: p.isSunday ? 1 : 0,
+      isLightsOut: p.isLightsOut ? 1 : 0,
+      workerId: p.workerId || 'NV00053',
+      workerName: worker?.name || p.workerId || 'Hoàng Ngọc Hà',
+      machineId: p.machineName || 'M01',
+      machineName: p.machineName || 'Máy tiện OKUMA',
+      machineMode: p.machineMode || 'FIRST',
+      poId: p.poId || 'PO485-01',
+      spId: op?.spId || prod?.spId || 'SP001',
+      customer: op?.customer || prod?.customer || 'Win-Win',
+      productName: op?.productName || prod?.productName || 'ALKTOP 1342 M',
+      ncId: p.ncId || 'NC098',
+      opName: op?.opName || p.ncId || 'G/c hoàn thiện',
+      stage: op?.stage || 'GC',
+      stepOrder: op?.stepOrder || 1,
+      isFinalOp: op?.isFinalOp ? 1 : 1,
+      stdSeconds: op?.stdSeconds || 120,
+      okQty: Number(p.okQty || 0),
+      reworkQty: Number(p.reworkQty || 0),
+      scrapQty: Number(p.scrapQty || 0),
+      defectType: p.defectType || '',
+      damageValue: Number(p.damageValue || 0),
+      stopMinutes: Number(p.stopMinutes || 0),
+      stopReason: p.stopReason || '',
+      toolCode: p.toolCode || '',
+      edgesUsed: Number(p.edgesUsed || 0),
+      selfCheckOk: 1,
+      qcStatus: 'PASSED',
+      pieceWage: calc.pieceWage,
+      otBonusWage: calc.otBonusWage,
+      waitWage: calc.waitWage,
+      mealAllowance: calc.mealAllowance,
+      scrapPenalty: calc.scrapPenalty,
+      income: calc.turnTotalIncome,
+      directPieceIncome: calc.directPieceIncome,
+      batchCost: (p.okQty || 0) * (op?.stdLaborCost || 35000),
+      kpiPct: 100,
+      kpiStatus: 'Đạt 100% ĐM',
+      photoUrl: p.photoBase64 || '',
+      handoverNote: p.handoverNote || '',
+      materialLot: 'LÔ-2026-CHIP',
+      isVoided: 0,
+      note: p.handoverNote || '',
+    };
+
+    // 1. Lưu vào GCCK_LOGS để hiển thị tức thì trên Tab 4 và Tab 3 của thợ
+    const logs = getStoredJson<ProductionLogDto[]>('GCCK_LOGS', sampleProductionLogs);
+    logs.unshift(newLog);
+    setStoredJson('GCCK_LOGS', logs);
+
+    // 2. Cập nhật thu nhập lũy kế trong ngày
+    const todayAcc = getStoredJson<Record<string, number>>('GCCK_TODAY_ACC', { NV00053: 157500 });
+    const curAcc = Number(todayAcc[newLog.workerId] || 0);
+    const nextAcc = curAcc + calc.turnTotalIncome;
+    todayAcc[newLog.workerId] = nextAcc;
+    setStoredJson('GCCK_TODAY_ACC', todayAcc);
+
+    // 3. Cập nhật opDoneMap
+    const opDone = getStoredJson<Record<string, number>>('GCCK_OP_DONE', seed.opDoneMap || {});
+    opDone[newLog.ncId] = (opDone[newLog.ncId] || 0) + newLog.okQty;
+    setStoredJson('GCCK_OP_DONE', opDone);
+
+    // 4. Đồng bộ ngầm sang Google Apps Script
+    void submitDirectToGoogleAppsScript(p);
+
     return {
       success: true,
-      logId: Date.now(),
-      recordUid: json.recordUid,
-      syncedWithSheets: true,
-      message: 'Đã ghi nhận báo cáo và đồng bộ Google Apps Script',
-    };
+      deduplicated: false,
+      message: 'Đã ghi nhận báo cáo vào nhật ký thành công',
+      warnings: [],
+      log: newLog,
+      payroll: calc,
+      todayTotalIncome: nextAcc,
+    } as ReportSubmitResponse;
   }
 
   // Master operations, machines, workers
