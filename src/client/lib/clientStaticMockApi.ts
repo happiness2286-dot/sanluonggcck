@@ -48,13 +48,17 @@ export interface DailyDateMeta {
 
 export function isStaticDeployment(): boolean {
   if (typeof window === 'undefined') return false;
+  const href = window.location.href;
   const host = window.location.hostname;
   return (
     host.endsWith('github.io') ||
+    href.includes('github.io') ||
     window.location.protocol === 'file:' ||
     host.includes('pages.dev') ||
     host.includes('netlify.app') ||
-    host.includes('vercel.app')
+    host.includes('vercel.app') ||
+    href.includes('sanluonggcck') ||
+    href.includes('SANLUONG2026')
   );
 }
 
