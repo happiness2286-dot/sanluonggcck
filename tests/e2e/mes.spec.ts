@@ -2,8 +2,8 @@ import { test, expect, type Page } from '@playwright/test';
 import path from 'node:path';
 import fs from 'node:fs';
 
-const ARTIFACT_DIR =
-  'C:\\Users\\IEC\\.gemini\\antigravity\\brain\\4b1437c6-88bd-4619-a3b7-485089d9dc9b';
+// artifact dir
+const ARTIFACT_DIR = path.resolve(process.cwd(), 'test-results/artifacts');
 
 function parseVndAmount(raw: string): number {
   const digits = raw.replace(/[^\d-]/g, '');
@@ -515,3 +515,4 @@ test.describe('GCCK Thắng Lợi MES — End-to-End Verification Suite', () => 
     }
   });
 });
+
