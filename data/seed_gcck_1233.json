@@ -170,6 +170,32 @@
       "pin": "1234"
     },
     {
+      "id": "NV00217",
+      "name": "Nguyễn Mạnh Hà",
+      "role": "CN",
+      "title": "Công nhân (NV05)",
+      "salaryMode": "Khoán 1 + 0.33 máy",
+      "baseSalary": 370000,
+      "costPerSec": 12.85,
+      "chatId": "",
+      "isLinked": false,
+      "username": "manhha",
+      "pin": "1234"
+    },
+    {
+      "id": "NV00220",
+      "name": "Trần Đăng Ninh",
+      "role": "CN",
+      "title": "Công nhân (NV09)",
+      "salaryMode": "Khoán 1 + 0.33 máy",
+      "baseSalary": 370000,
+      "costPerSec": 12.85,
+      "chatId": "",
+      "isLinked": false,
+      "username": "dangninh",
+      "pin": "1234"
+    },
+    {
       "id": "NV_KT01",
       "name": "Đinh Văn Thiên",
       "role": "KT",

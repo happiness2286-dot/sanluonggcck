@@ -4,6 +4,7 @@ import type {
   AuthSessionUser,
   BootstrapPayload,
   CuttingTool,
+  DailyPlanRow,
   HandoverSlipRow,
   JobTravelerDto,
   MachineInfo,
@@ -415,7 +416,11 @@ export async function submitDirectToGoogleAppsScript(
 
   const gasBody: Record<string, any> = {
     action: 'submitDailyReport',
-    payload: fullPayload,
+    targetSheetId: '1p1xE6AT0ullmXl7R4BQOPxwEPH3wxzGkyPuxdk529h8',
+    payload: {
+      ...fullPayload,
+      targetSheetId: '1p1xE6AT0ullmXl7R4BQOPxwEPH3wxzGkyPuxdk529h8',
+    },
     report: fullPayload,
     data: fullPayload,
     // Direct fields for backward compatibility with pure formula GAS
@@ -697,4 +702,173 @@ export function getFallbackWeeklyReport(weekStart?: string): WeeklyReportData {
       outsourceRecommendations: [],
     },
   };
+}
+
+// ==================== DAILY SCHEDULE PERSISTENCE (FALLBACK & CLIENT MODE) ====================
+const DAILY_SCHEDULE_PREFIX = 'GCCK_DAILY_SCHEDULE_';
+const DAILY_SCHEDULE_INDEX_KEY = 'GCCK_DAILY_SCHEDULE_DATES_LIST';
+
+const BASE_SAMPLE_SCHEDULE_ROWS = [
+  { shiftType: 'Ca 2', stt: 1, workerName: 'Phùng Gia Phúc', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c NC3 kích thước 412mm lần 2', plannedQty: 20, machineName: 'Máy Phay CNC1', note: '' },
+  { shiftType: 'Ca 2', stt: 2, workerName: 'Phùng Gia Phúc', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c theo bản vẽ phay MP', plannedQty: 12, machineName: 'Máy Phay CNC2', note: '' },
+  { shiftType: 'Ca 2', stt: 3, workerName: 'Phùng Gia Phúc', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c NC3 kích thước 412mm lần 1', plannedQty: 10, machineName: 'Máy phay OKK3, OKK1', note: '' },
+  { shiftType: 'Ca 2', stt: 4, workerName: 'Phạm Văn Sam', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c NC3 kích thước 412mm lần 1', plannedQty: 20, machineName: 'Máy phay OKK3, OKK1', note: '' },
+  { shiftType: 'Ca 2', stt: 5, workerName: 'Phạm Văn Sam', customer: 'Hà Song Hải- XM Hạ Long', productName: 'Thanh đập đá vôi (2220x510x145)', opName: 'G/c theo bản vẽ', plannedQty: 1, machineName: 'Máy phay OIGO', note: '' },
+  { shiftType: 'Ca 2', stt: 6, workerName: 'Phạm Văn Sam', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c theo bản vẽ phay MP', plannedQty: 8, machineName: 'Máy Phay CNC2', note: '' },
+  { shiftType: 'Ca 2', stt: 7, workerName: 'Trần Văn Quỳnh', customer: 'Hà Song Hải- XM Hạ Long', productName: 'Thanh đập đá vôi (2220x510x145)', opName: 'G/c theo bản vẽ', plannedQty: 1, machineName: 'Máy phay OIGO', note: '' },
+  { shiftType: 'Ca 2', stt: 8, workerName: 'Trần Văn Quỳnh', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c theo bản vẽ', plannedQty: 9, machineName: 'Máy Phay CNC1', note: '' },
+  { shiftType: 'Ca 2', stt: 9, workerName: 'Trần Văn Quỳnh', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c theo bản vẽ', plannedQty: 8, machineName: 'Máy Phay CNC2', note: '' },
+  { shiftType: 'Ca 2', stt: 10, workerName: 'Trần Văn Quỳnh', customer: 'Thysen', productName: 'Sealing strip, above', opName: 'G/c theo bản vẽ', plannedQty: 2, machineName: 'Máy Phay CNC1', note: 'Tăng ca 2 tiếng' },
+  { shiftType: 'Ca 2', stt: 11, workerName: 'Đinh Văn Nhận', customer: 'Win win', productName: 'Mẫu kéo nén', opName: 'G/c theo bản vẽ', plannedQty: 6, machineName: 'Máy tiện T630-Okuma', note: '' },
+  { shiftType: 'Ca 2', stt: 12, workerName: 'Đinh Văn Nhận', customer: 'Cty', productName: 'Mẫu va đập VC , Bi các loại', opName: 'G/c cắt mài theo yêu cầu', plannedQty: 6, machineName: 'Máy cắt dây DK 7780, DK7745 , podatech', note: '' },
+  { shiftType: 'Ca 2', stt: 13, workerName: 'Đinh Văn Nhận', customer: 'Win win', productName: 'ALKTOP 1640 M', opName: 'G/c theo bản vẽ', plannedQty: 16, machineName: 'Máy tiện T630-Okuma', note: 'Tăng ca 2 tiếng' },
+  { shiftType: 'Ca 2', stt: 14, workerName: 'Phạm Văn Tráng', customer: 'Hà Song Hải- XM Hạ Long', productName: 'Thanh đập đá vôi (2220x510x145)', opName: 'G/c theo bản vẽ', plannedQty: 1, machineName: 'Máy phay OIGO', note: '' },
+  { shiftType: 'Ca 2', stt: 15, workerName: 'Phạm Văn Tráng', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c theo bản vẽ phay MP', plannedQty: 12, machineName: 'Máy Phay CNC2', note: '' },
+  { shiftType: 'Ca 2', stt: 16, workerName: 'Phạm Văn Tráng', customer: 'Win win', productName: 'ISHIZUE 216-550', opName: 'G/c theo bản vẽ', plannedQty: 4, machineName: 'Máy tiện T630-Okuma', note: 'Tăng ca 2 tiếng' },
+  { shiftType: 'Ca 2', stt: 17, workerName: 'Nguyễn Trung Đông', customer: 'Win win', productName: 'ISHIZUE 355-1060,,457-950', opName: 'G/c theo bản vẽ', plannedQty: 6, machineName: 'Máy tiện FUJI', note: '' },
+  { shiftType: 'Ca 2', stt: 18, workerName: 'Nguyễn Trung Đông', customer: 'Cty', productName: 'Mẫu va đập VC , Bi các loại', opName: 'G/c cắt mài theo yêu cầu', plannedQty: 6, machineName: 'Máy cắt dây DK 7780, DK7745 , podatech', note: '' },
+  { shiftType: 'Ca 2', stt: 19, workerName: 'Nguyễn Trung Đông', customer: 'Win win', productName: 'ISHIZUE 355-1060,,457-950', opName: 'G/c theo bản vẽ', plannedQty: 2, machineName: 'Máy tiện FUJI', note: 'Tăng ca 2 tiếng' },
+  { shiftType: 'Ca 2', stt: 20, workerName: 'Nguyễn Mạnh Hà', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c theo bản vẽ', plannedQty: 12, machineName: 'Máy tiện T630-Okuma', note: '' },
+  { shiftType: 'Ca 2', stt: 21, workerName: 'Nguyễn Mạnh Hà', customer: 'Cty', productName: 'Mẫu va đập VC , Bi các loại', opName: 'G/c cắt mài theo yêu cầu', plannedQty: 4, machineName: 'Máy cắt dây DK 7780, DK7745 , podatech', note: '' },
+  { shiftType: 'Ca 2', stt: 22, workerName: 'Trần Đăng Ninh', customer: 'Win win', productName: 'ALKTOP 1640 M', opName: 'G/c theo bản vẽ phay MP', plannedQty: 16, machineName: 'Máy Phay OKK3', note: '' },
+  { shiftType: 'Ca 2', stt: 23, workerName: 'Trần Đăng Ninh', customer: 'Thysen', productName: 'Sealing strip, above', opName: 'G/c theo bản vẽ', plannedQty: 5, machineName: 'Máy Khoan cần', note: '' },
+  { shiftType: 'Ca 2', stt: 24, workerName: 'Phùng Đình Hùng', customer: 'Hà Song Hải- XM Hạ Long', productName: 'Mantle số hiệu A3G03266-3 theo bv HAKA12756-01', opName: 'G/c theo bản vẽ', plannedQty: 1, machineName: 'Máy tiện T1516', note: '' },
+  { shiftType: 'Ca 2', stt: 25, workerName: 'Phùng Đình Hùng', customer: 'Cty', productName: 'Mẫu thử kéo', opName: 'G/c theo bản vẽ', plannedQty: 6, machineName: 'Máy cưa vòng', note: '' },
+  { shiftType: 'Ca 2', stt: 26, workerName: 'Phùng Công Thắng', customer: 'Thysen', productName: 'ALKTOP 1950 M, 1130H', opName: 'G/c khoan lỗ phi 14 hoàn thiện', plannedQty: 16, machineName: 'Máy tiện T630-Okuma', note: '' },
+  { shiftType: 'Ca 2', stt: 27, workerName: 'Phùng Công Thắng', customer: 'Cty', productName: 'Mẫu va đập VC , Bi các loại', opName: 'G/c cắt mài theo yêu cầu', plannedQty: 6, machineName: 'Máy cắt dây DK 7780, DK7745 , podatech', note: '' },
+  { shiftType: 'Ca 2', stt: 28, workerName: 'Phùng Công Thắng', customer: 'Thysen', productName: 'Sealing strip, above', opName: 'G/c theo bản vẽ', plannedQty: 5, machineName: 'Máy Khoan cần', note: 'Tăng ca 2 tiếng' },
+  { shiftType: 'Ca 2', stt: 29, workerName: 'Đặng Ngọc Long', customer: 'Win win', productName: 'ISHIZUE 267-700,267-800', opName: 'G/c theo bản vẽ', plannedQty: 10, machineName: 'Máy tiện FUJI', note: '' },
+  { shiftType: 'Ca 2', stt: 30, workerName: 'Đặng Ngọc Long', customer: 'Cty', productName: 'Mẫu va đập VC , Bi các loại', opName: 'G/c cắt mài theo yêu cầu', plannedQty: 6, machineName: 'Máy cắt dây DK 7780, DK7745 , podatech', note: '' },
+  { shiftType: 'Ca 2', stt: 31, workerName: 'Đặng Ngọc Long', customer: 'Win win', productName: 'ISHIZUE 267-700,267-800', opName: 'G/c theo bản vẽ', plannedQty: 3, machineName: 'Máy tiện T630-Okuma', note: 'Tăng ca 2 tiếng' },
+  { shiftType: 'Ca 3', stt: 32, workerName: 'Trần Văn Dũng', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c theo bản vẽ', plannedQty: 9, machineName: 'Máy Phay CNC1', note: '' },
+  { shiftType: 'Ca 3', stt: 33, workerName: 'Trần Văn Dũng', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c theo bản vẽ', plannedQty: 8, machineName: 'Máy Phay CNC2', note: '' },
+  { shiftType: 'Ca 3', stt: 34, workerName: 'Trần Văn Dũng', customer: 'Thysen', productName: 'Sealing strip, above', opName: 'G/c theo bản vẽ', plannedQty: 2, machineName: 'Máy Phay CNC1', note: '' },
+  { shiftType: 'Ca 3', stt: 35, workerName: 'Vũ Tiến Thuận', customer: 'Win win', productName: 'ISHIZUE 267-700,267-800', opName: 'G/c theo bản vẽ', plannedQty: 10, machineName: 'Máy tiện FUJI', note: '' },
+  { shiftType: 'Ca 3', stt: 36, workerName: 'Vũ Tiến Thuận', customer: 'Cty', productName: 'Mẫu va đập VC , Bi các loại', opName: 'G/c cắt mài theo yêu cầu', plannedQty: 6, machineName: 'Máy cắt dây DK 7780, DK7745 , podatech', note: '' },
+  { shiftType: 'Ca 3', stt: 37, workerName: 'Nguyễn Văn Thanh', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c theo bản vẽ', plannedQty: 12, machineName: 'Máy tiện T630-Okuma', note: '' },
+  { shiftType: 'Ca 3', stt: 38, workerName: 'Nguyễn Văn Thanh', customer: 'Cty', productName: 'Mẫu va đập VC , Bi các loại', opName: 'G/c cắt mài theo yêu cầu', plannedQty: 6, machineName: 'Máy cắt dây DK 7780, DK7745 , podatech', note: '' },
+  { shiftType: 'Ca 3', stt: 39, workerName: 'Nguyễn Văn Thanh', customer: 'Thysen', productName: 'Sealing strip, below', opName: 'G/c theo bản vẽ', plannedQty: 2, machineName: 'Máy phay OKK3, OKK1', note: 'Tăng ca 2 tiếng' },
+  { shiftType: 'Ca 1', stt: 40, workerName: 'Hoàng Ngọc Hà', customer: 'Nội bộ xưởng', productName: 'Điều hành & Phân công 17 máy xưởng GCCK', opName: 'Điều phối sản xuất & Giám sát tiến độ PO', plannedQty: 1, machineName: 'Tổ chức sản xuất', note: 'Giám sát chung' }
+];
+
+export function buildDefaultScheduleRows(workDate: string): DailyPlanRow[] {
+  return BASE_SAMPLE_SCHEDULE_ROWS.map((r, i) => ({
+    id: i + 1,
+    workDate,
+    shiftType: r.shiftType,
+    stt: r.stt,
+    workerName: r.workerName,
+    customer: r.customer,
+    productName: r.productName,
+    opName: r.opName,
+    plannedQty: r.plannedQty,
+    machineName: r.machineName,
+    note: r.note,
+    actualQty: 0,
+    status: 'PLANNED',
+  }));
+}
+
+export function getFallbackDailyDates(): {
+  success: boolean;
+  dates: Array<{ workDate: string; rowCount: number; workerCount: number }>;
+} {
+  const defaultDates = ['2026-10-30', '2026-10-29', '2026-10-22', '2026-10-21'];
+  let storedDates: string[] = [];
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(DAILY_SCHEDULE_INDEX_KEY) : null;
+    if (raw) storedDates = JSON.parse(raw);
+  } catch {}
+
+  const merged = Array.from(new Set([...storedDates, ...defaultDates])).sort((a, b) =>
+    b.localeCompare(a)
+  );
+
+  const dates = merged.map((d) => {
+    const schedule = getFallbackDailySchedule(d);
+    const rows = schedule.rows || [];
+    const uniqueWorkers = new Set(rows.map((r) => r.workerName));
+    return {
+      workDate: d,
+      rowCount: rows.length,
+      workerCount: uniqueWorkers.size,
+    };
+  });
+
+  return { success: true, dates };
+}
+
+export function getFallbackDailySchedule(workDate: string): {
+  success: boolean;
+  rows: DailyPlanRow[];
+} {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(DAILY_SCHEDULE_PREFIX + workDate) : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return { success: true, rows: parsed };
+      }
+    }
+  } catch {}
+
+  const rows = buildDefaultScheduleRows(workDate);
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(DAILY_SCHEDULE_PREFIX + workDate, JSON.stringify(rows));
+    }
+  } catch {}
+  return { success: true, rows };
+}
+
+export function saveFallbackDailySchedule(
+  workDate: string,
+  rows: DailyPlanRow[]
+): { success: boolean; count: number } {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(DAILY_SCHEDULE_PREFIX + workDate, JSON.stringify(rows));
+      let storedDates: string[] = [];
+      const raw = localStorage.getItem(DAILY_SCHEDULE_INDEX_KEY);
+      if (raw) storedDates = JSON.parse(raw);
+      if (!storedDates.includes(workDate)) {
+        storedDates.push(workDate);
+        storedDates.sort((a, b) => b.localeCompare(a));
+        localStorage.setItem(DAILY_SCHEDULE_INDEX_KEY, JSON.stringify(storedDates));
+      }
+    }
+  } catch {}
+  return { success: true, count: rows.length };
+}
+
+export function copyFallbackDailySchedule(
+  sourceDate: string,
+  targetDate: string,
+  resetQty?: boolean
+): { success: boolean; targetDate: string; rowCount: number } {
+  const sourceSchedule = getFallbackDailySchedule(sourceDate);
+  const clonedRows: DailyPlanRow[] = (sourceSchedule.rows || []).map((r, i) => ({
+    ...r,
+    id: i + 1,
+    workDate: targetDate,
+    actualQty: resetQty ? 0 : r.actualQty || 0,
+    status: resetQty ? 'PLANNED' : r.status || 'PLANNED',
+  }));
+
+  saveFallbackDailySchedule(targetDate, clonedRows);
+  return { success: true, targetDate, rowCount: clonedRows.length };
+}
+
+export function deleteFallbackDailySchedule(workDate: string): { success: boolean } {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(DAILY_SCHEDULE_PREFIX + workDate);
+      let storedDates: string[] = [];
+      const raw = localStorage.getItem(DAILY_SCHEDULE_INDEX_KEY);
+      if (raw) storedDates = JSON.parse(raw);
+      storedDates = storedDates.filter((d) => d !== workDate);
+      localStorage.setItem(DAILY_SCHEDULE_INDEX_KEY, JSON.stringify(storedDates));
+    }
+  } catch {}
+  return { success: true };
 }

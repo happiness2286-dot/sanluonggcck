@@ -69,7 +69,7 @@ export function DailyWeeklyScheduleTab({
   const [subTab, setSubTab] = useState<'daily' | 'weekly'>('daily');
 
   // ==================== TAB 1: DAILY SCHEDULE STATE ====================
-  const [selectedDate, setSelectedDate] = useState<string>('2026-10-21');
+  const [selectedDate, setSelectedDate] = useState<string>('2026-10-30');
   const [selectedShift, setSelectedShift] = useState<string>('ALL');
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [dailyRows, setDailyRows] = useState<DailyPlanRow[]>([]);
@@ -82,7 +82,7 @@ export function DailyWeeklyScheduleTab({
   const [showNewDateModal, setShowNewDateModal] = useState<boolean>(false);
   const [newPlanDate, setNewPlanDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [newPlanMode, setNewPlanMode] = useState<'copy' | 'template' | 'blank'>('copy');
-  const [sourceCopyDate, setSourceCopyDate] = useState<string>('2026-10-21');
+  const [sourceCopyDate, setSourceCopyDate] = useState<string>('2026-10-30');
   const [copyResetQty, setCopyResetQty] = useState<boolean>(false);
   const [creatingDate, setCreatingDate] = useState<boolean>(false);
 

@@ -1,10 +1,15 @@
 import {
+  copyFallbackDailySchedule,
+  deleteFallbackDailySchedule,
   getFallbackBootstrap,
+  getFallbackDailyDates,
+  getFallbackDailySchedule,
   getFallbackHandovers,
   getFallbackSession,
   getFallbackTraveler,
   getFallbackUser,
   getFallbackWeeklyReport,
+  saveFallbackDailySchedule,
   saveFallbackHandover,
   submitDirectToGoogleAppsScript,
   FALLBACK_PRODUCTS,
@@ -66,7 +71,7 @@ export async function apiFetch<T = any>(
 ): Promise<T> {
   // If running on static host (GitHub Pages), resolve directly with client fallback without network latency or 405 errors
   if (isStaticHost()) {
-    const fallback = handleClientFallback<T>(path, options);
+    const fallback = await handleClientFallback<T>(path, options);
     if (fallback !== null) return fallback;
   }
 
@@ -103,7 +108,7 @@ export async function apiFetch<T = any>(
       : await resp.text();
 
     if (!resp.ok) {
-      const fallback = handleClientFallback<T>(path, options);
+      const fallback = await handleClientFallback<T>(path, options);
       if (fallback !== null) return fallback;
 
       const msg =
@@ -114,7 +119,7 @@ export async function apiFetch<T = any>(
 
     return payload as T;
   } catch (err: any) {
-    const fallback = handleClientFallback<T>(path, options);
+    const fallback = await handleClientFallback<T>(path, options);
     if (fallback !== null) return fallback;
 
     if (err instanceof ApiError) throw err;
@@ -130,7 +135,7 @@ export async function apiFetch<T = any>(
   }
 }
 
-function handleClientFallback<T>(path: string, options: ApiFetchOptions): T | null {
+async function handleClientFallback<T>(path: string, options: ApiFetchOptions): Promise<T | null> {
   const norm = path.toLowerCase();
 
   if (norm.includes('/auth/session')) {
@@ -160,16 +165,32 @@ function handleClientFallback<T>(path: string, options: ApiFetchOptions): T | nu
     return getFallbackBootstrap() as unknown as T;
   }
   if (norm.includes('/schedules/daily-dates')) {
-    return {
-      success: true,
-      dates: [
-        { workDate: '2026-10-21', rowCount: 39, workerCount: 13 },
-        { workDate: '2026-10-22', rowCount: 39, workerCount: 13 },
-      ],
-    } as unknown as T;
+    return getFallbackDailyDates() as unknown as T;
+  }
+  if (norm.includes('/schedules/daily/copy')) {
+    const body = (options.json || {}) as any;
+    const res = copyFallbackDailySchedule(
+      body?.sourceDate || '',
+      body?.targetDate || '',
+      body?.resetQty
+    );
+    return res as unknown as T;
   }
   if (norm.includes('/schedules/daily')) {
-    return { success: true, rows: [] } as unknown as T;
+    if (options.method === 'POST') {
+      const body = (options.json || {}) as any;
+      const res = saveFallbackDailySchedule(body?.workDate || '2026-10-30', body?.rows || []);
+      return res as unknown as T;
+    }
+    if (options.method === 'DELETE') {
+      const urlParams = new URLSearchParams(path.split('?')[1] || '');
+      const d = urlParams.get('date') || '';
+      const res = deleteFallbackDailySchedule(d);
+      return res as unknown as T;
+    }
+    const urlParams = new URLSearchParams(path.split('?')[1] || '');
+    const dateParam = urlParams.get('date') || '2026-10-30';
+    return getFallbackDailySchedule(dateParam) as unknown as T;
   }
   if (norm.includes('/costing')) {
     return FALLBACK_PRODUCTS as unknown as T;
@@ -230,9 +251,8 @@ function handleClientFallback<T>(path: string, options: ApiFetchOptions): T | nu
   }
   if (norm.includes('/reports') && options.method === 'POST') {
     const body = (options.json || {}) as any;
-    void submitDirectToGoogleAppsScript(body);
-    const mockRes = submitDirectToGoogleAppsScript(body);
-    return mockRes as unknown as T;
+    const res = await submitDirectToGoogleAppsScript(body);
+    return res as unknown as T;
   }
   if (norm.includes('/handovers')) {
     if (options.method === 'POST') {
