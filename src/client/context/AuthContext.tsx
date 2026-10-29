@@ -282,9 +282,8 @@ export function PinLoginModal({
               return (
                 <span
                   key={idx}
-                  className={`h-3 w-3 rounded-full transition-all ${
-                    filled ? 'scale-110 bg-blue-600 shadow-sm' : 'bg-slate-200'
-                  }`}
+                  className={`h-3 w-3 rounded-full transition-all ${filled ? 'scale-110 bg-blue-600 shadow-sm' : 'bg-slate-200'
+                    }`}
                 />
               );
             })}
