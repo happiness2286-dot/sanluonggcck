@@ -19,6 +19,12 @@ import type {
   WeeklyReportData,
   WorkerDto,
 } from '@shared/types';
+import {
+  computeEmployeeMonthlyStats,
+  computeMonthDows,
+  computeMonthly3PPayroll,
+  DEFAULT_MEAL_CONFIG,
+} from '../../shared/attendanceParser';
 import seedData from '../../../data/seed_gcck_1233.json';
 
 export const GAS_WEBHOOK_URL =
@@ -129,40 +135,14 @@ export const FALLBACK_WORKERS: WorkerDto[] = (seedData.workers || []).map((w: an
   };
 });
 
-export const FALLBACK_PROFILES: QuickSwitchProfile[] = [
-  {
-    workerId: 'NV00214',
-    name: 'Trần Văn Quỳnh',
-    role: 'CN',
-    appRole: 'WORKER',
-    title: 'Công nhân đứng máy CNC',
-    salaryMode: 'KHOAN',
-  },
-  {
-    workerId: 'NV_KT02',
-    name: 'Nguyễn Văn Duy',
-    role: 'KT',
-    appRole: 'QC',
-    title: 'Kiểm soát chất lượng QC',
-    salaryMode: 'LUONG_NGAY',
-  },
-  {
-    workerId: 'NV00266',
-    name: 'Trần Văn Dũng',
-    role: 'TC',
-    appRole: 'SHIFT_LEADER',
-    title: 'Trưởng ca sản xuất',
-    salaryMode: 'LUONG_NGAY',
-  },
-  {
-    workerId: 'NV00053',
-    name: 'Hoàng Ngọc Hà',
-    role: 'QĐ',
-    appRole: 'ADMIN',
-    title: 'Quản đốc xưởng',
-    salaryMode: 'LUONG_NGAY',
-  },
-];
+export const FALLBACK_PROFILES: QuickSwitchProfile[] = FALLBACK_WORKERS.map((w) => ({
+  workerId: w.id,
+  name: w.name,
+  role: w.role,
+  appRole: w.appRole,
+  title: w.title,
+  salaryMode: w.salaryMode,
+}));
 
 export function getFallbackUser(workerId: string = 'NV00214'): AuthSessionUser {
   const w = FALLBACK_WORKERS.find((x) => x.id === workerId) || FALLBACK_WORKERS[0];
@@ -447,8 +427,9 @@ export async function submitDirectToGoogleAppsScript(
     shift: payload.shiftType || 'Ca 1',
   };
 
+  const targetUrl = getGasWebhookUrl();
   try {
-    await fetch(GAS_WEBHOOK_URL, {
+    await fetch(targetUrl, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -967,4 +948,104 @@ export function patchFallbackCosting(
   const all = getFallbackCosting();
   const item = all.items.find((i) => i.spId === spId) || all.items[0];
   return { success: true, item };
+}
+
+export function getGasWebhookUrl(): string {
+  try {
+    const custom = typeof localStorage !== 'undefined' ? localStorage.getItem('GCCK_CUSTOM_GAS_WEBHOOK_URL') : null;
+    if (custom && custom.trim().startsWith('https://script.google.com/')) {
+      return custom.trim();
+    }
+  } catch {}
+  return GAS_WEBHOOK_URL;
+}
+
+export function getFallbackAttendance(yearMonth: string = '2026-10') {
+  const [yStr, mStr] = yearMonth.split('-');
+  const year = Number(yStr) || 2026;
+  const month = Number(mStr) || 10;
+  const dows = computeMonthDows(year, month);
+  const mealConfig = DEFAULT_MEAL_CONFIG;
+
+  const storageKey = `GCCK_FALLBACK_ATTENDANCE_${yearMonth}`;
+  let rawList: any[] = [];
+  try {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
+    if (saved) rawList = JSON.parse(saved);
+  } catch {}
+
+  if (!rawList || rawList.length === 0) {
+    rawList = (seedData.attendanceList || []).map((a: any) => ({
+      empId: String(a.empId),
+      name: String(a.name),
+      workType: String(a.workType || 'Công'),
+      defaultShift: String(a.defaultShift || 'Ca 1'),
+      days: Array.isArray(a.days) ? [...a.days] : new Array(31).fill(''),
+      yearDaysHist: a.yearDaysHist || [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    }));
+  }
+
+  const employees = rawList.map((emp) => computeEmployeeMonthlyStats(emp, year, month, mealConfig));
+
+  return {
+    yearMonth,
+    year,
+    month,
+    dows,
+    mealConfig,
+    employees,
+  };
+}
+
+export function saveFallbackAttendanceCell(yearMonth: string, empId: string, dayIndex: number, value: string) {
+  const [yStr, mStr] = yearMonth.split('-');
+  const year = Number(yStr) || 2026;
+  const month = Number(mStr) || 10;
+  const mealConfig = DEFAULT_MEAL_CONFIG;
+
+  const storageKey = `GCCK_FALLBACK_ATTENDANCE_${yearMonth}`;
+  let rawList: any[] = [];
+  try {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
+    if (saved) rawList = JSON.parse(saved);
+  } catch {}
+
+  if (!rawList || rawList.length === 0) {
+    rawList = (seedData.attendanceList || []).map((a: any) => ({
+      empId: String(a.empId),
+      name: String(a.name),
+      workType: String(a.workType || 'Công'),
+      defaultShift: String(a.defaultShift || 'Ca 1'),
+      days: Array.isArray(a.days) ? [...a.days] : new Array(31).fill(''),
+      yearDaysHist: a.yearDaysHist || [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    }));
+  }
+
+  const target = rawList.find((e) => e.empId === empId);
+  if (target) {
+    if (!Array.isArray(target.days)) target.days = new Array(31).fill('');
+    while (target.days.length < 31) target.days.push('');
+    if (dayIndex >= 0 && dayIndex < 31) {
+      target.days[dayIndex] = value;
+    }
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(storageKey, JSON.stringify(rawList));
+      }
+    } catch {}
+  }
+
+  const updatedSummary = target ? computeEmployeeMonthlyStats(target, year, month, mealConfig) : null;
+  return { success: true, employee: updatedSummary };
+}
+
+export function getFallbackPayroll(yearMonth: string = '2026-10') {
+  const att = getFallbackAttendance(yearMonth);
+  const rows = computeMonthly3PPayroll(FALLBACK_WORKERS, att.employees, []);
+  const totalNetPay = rows.reduce((s, r) => s + r.netPay, 0);
+  return {
+    yearMonth,
+    rows,
+    totalNetPay,
+  };
 }

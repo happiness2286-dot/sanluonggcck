@@ -303,7 +303,38 @@ function doPost(e) {
 
     // 2. Đọc dữ liệu JSON gửi từ điện thoại công nhân
     var contents = (e && e.postData && e.postData.contents) ? e.postData.contents : "{}";
-    var data = JSON.parse(contents);
+    var data = {};
+    try {
+      data = JSON.parse(contents);
+    } catch (eJson) {
+      data = {};
+    }
+
+    // Chuẩn hóa unwrap nếu bọc trong payload (submitDailyReport hoặc Mini App)
+    if (data.action === "submitDailyReport" && data.payload) {
+      for (var k in data.payload) {
+        if (data[k] === undefined) {
+          data[k] = data.payload[k];
+        }
+      }
+    }
+
+    // Tương thích đa chiều mọi tên trường (Mini App mobile & Web client)
+    if (!data.worker && data.workerName) data.worker = data.workerName;
+    if (!data.date && data.workDate) data.date = data.workDate;
+    if (!data.shift && data.shiftType) data.shift = data.shiftType;
+    if (!data.product && data.productName) data.product = data.productName;
+    if (!data.op && data.opName) data.op = data.opName;
+    if (!data.machine && data.machineName) data.machine = data.machineName;
+    if (data.qty_dat === undefined && data.okQty !== undefined) data.qty_dat = data.okQty;
+    if (data.qty_xuly === undefined && data.reworkQty !== undefined) data.qty_xuly = data.reworkQty;
+    if (data.qty_huy === undefined && data.scrapQty !== undefined) data.qty_huy = data.scrapQty;
+    if (!data.responsibility && data.defectType) data.responsibility = data.defectType;
+    if (!data.material && data.toolCode) data.material = data.toolCode;
+    if (data.qty_material === undefined && data.edgesUsed !== undefined) data.qty_material = data.edgesUsed;
+    if (data.downtime_min === undefined && data.stopMinutes !== undefined) data.downtime_min = data.stopMinutes;
+    if (!data.downtime_note && data.stopReason) data.downtime_note = data.stopReason;
+    if (!data.record_id && data.recordUid) data.record_id = data.recordUid;
 
     // XỬ LÝ LƯU DANH MỤC MASTER (SẢN PHẨM, NGUYÊN CÔNG & CÔNG NHÂN) TỪ ADMIN
     if (data.action === "saveMasterData" && data.masterData) {
@@ -710,7 +741,7 @@ function doPost(e) {
 
       return ContentService.createTextOutput(JSON.stringify({
         "result": "success",
-        "message": "Đã lưu sản lượng và tải ảnh lên Google Drive thành công!"
+        "success": true, "row": targetRow, "message": "✅ Đã ghi nhận báo cáo sản lượng vào dòng " + targetRow + " sheet 'Nhật Ký Sản Lượng' thành công!"
       })).setMimeType(ContentService.MimeType.JSON);
 
     } finally {

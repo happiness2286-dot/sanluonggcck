@@ -1,22 +1,27 @@
 import {
   copyFallbackDailySchedule,
   deleteFallbackDailySchedule,
+  getClientStoredLogs,
+  getFallbackAttendance,
   getFallbackBootstrap,
   getFallbackCosting,
   getFallbackDailyDates,
   getFallbackDailySchedule,
   getFallbackHandovers,
+  getFallbackPayroll,
   getFallbackSession,
   getFallbackTraveler,
   getFallbackUser,
   getFallbackWeeklyReport,
   patchFallbackCosting,
+  saveFallbackAttendanceCell,
   saveFallbackDailySchedule,
   saveFallbackHandover,
   submitDirectToGoogleAppsScript,
   FALLBACK_ORDERS,
   FALLBACK_PRODUCTS,
 } from './clientFallbackStore';
+import seedData from '../../../data/seed_gcck_1233.json';
 import { isStaticHost } from './navigation';
 
 export const AUTH_TOKEN_STORAGE_KEY = 'GCCK_SESSION_TOKEN';
@@ -270,6 +275,45 @@ async function handleClientFallback<T>(path: string, options: ApiFetchOptions): 
     const res = await submitDirectToGoogleAppsScript(body);
     return res as unknown as T;
   }
+  if (norm.includes('/attendance')) {
+    if (norm.includes('/cell') && options.method === 'PUT') {
+      const parts = path.split('/').filter(Boolean);
+      const ymIdx = parts.indexOf('attendance');
+      const ym = ymIdx >= 0 && parts[ymIdx + 1] ? parts[ymIdx + 1] : '2026-10';
+      const body = (options.json || {}) as any;
+      return saveFallbackAttendanceCell(
+        ym,
+        body?.empId,
+        Number(body?.dayIndex),
+        String(body?.value ?? '')
+      ) as unknown as T;
+    }
+    if (options.method === 'POST') {
+      return { success: true } as unknown as T;
+    }
+    const parts = path.split('/').filter(Boolean);
+    const ymIdx = parts.indexOf('attendance');
+    const ym = ymIdx >= 0 && parts[ymIdx + 1] ? parts[ymIdx + 1] : '2026-10';
+    return getFallbackAttendance(ym) as unknown as T;
+  }
+
+  if (norm.includes('/payroll')) {
+    if (options.method === 'POST') {
+      return { success: true } as unknown as T;
+    }
+    const parts = path.split('/').filter(Boolean);
+    const ymIdx = parts.indexOf('payroll');
+    const ym = ymIdx >= 0 && parts[ymIdx + 1] ? parts[ymIdx + 1] : '2026-10';
+    return getFallbackPayroll(ym) as unknown as T;
+  }
+
+  if (norm === '/schedules' || norm.startsWith('/schedules?') || norm.startsWith('/schedules/')) {
+    return {
+      schedules: [],
+      loads: [],
+    } as unknown as T;
+  }
+
   if (norm.includes('/handovers')) {
     if (options.method === 'POST') {
       const body = options.json as any;
@@ -277,6 +321,45 @@ async function handleClientFallback<T>(path: string, options: ApiFetchOptions): 
       return { success: true, item: body } as unknown as T;
     }
     return getFallbackHandovers() as unknown as T;
+  }
+
+  if (norm.includes('/logs')) {
+    return {
+      items: getClientStoredLogs(),
+    } as unknown as T;
+  }
+
+  if (norm.includes('/qc')) {
+    return {
+      items: [],
+    } as unknown as T;
+  }
+
+  if (norm.includes('/traceability')) {
+    const parts = path.split('/').filter(Boolean);
+    const poId = parts[parts.length - 1] || 'PO485-01';
+    return {
+      poId,
+      logs: [],
+      ops: [],
+    } as unknown as T;
+  }
+
+  if (norm.includes('/config')) {
+    return {
+      config: (seedData as any).config || {},
+    } as unknown as T;
+  }
+
+  if (norm.includes('/sync/outbox')) {
+    return {
+      items: [],
+    } as unknown as T;
+  }
+
+  // Static Host safety net: NEVER throw 404 on standalone GitHub Pages
+  if (isStaticHost()) {
+    return { success: true, items: [] } as unknown as T;
   }
 
   return null;

@@ -730,7 +730,14 @@ export function MasterAndConfigTab({
         apiClient.get<{ config: Record<string, string> }>('/config'),
         apiClient.get<{ items: SyncOutboxItem[] }>('/sync/outbox'),
       ]);
-      setCfgMap((prev) => ({ ...prev, ...(cfgRes.config || {}) }));
+      setCfgMap((prev) => {
+        const next = { ...prev, ...(cfgRes.config || {}) };
+        try {
+          const localWebhook = localStorage.getItem('GCCK_CUSTOM_GAS_WEBHOOK_URL');
+          if (localWebhook) next.GAS_WEBHOOK_URL = localWebhook;
+        } catch {}
+        return next;
+      });
       setOutboxItems(outboxRes.items || []);
     } catch (err: any) {
       toast.error(err?.message || 'Không thể tải cấu hình hệ thống.');
@@ -754,6 +761,11 @@ export function MasterAndConfigTab({
         success: boolean;
         config: Record<string, string>;
       }>('/config', cfgMap);
+      if (cfgMap.GAS_WEBHOOK_URL) {
+        try {
+          localStorage.setItem('GCCK_CUSTOM_GAS_WEBHOOK_URL', cfgMap.GAS_WEBHOOK_URL.trim());
+        } catch {}
+      }
       setCfgMap((prev) => ({ ...prev, ...(res.config || {}) }));
       toast.success('Đã lưu toàn bộ Cấu hình Hệ thống, Phụ cấp Ăn ca & Chế độ Bảo mật PIN.');
       await refreshSession();
