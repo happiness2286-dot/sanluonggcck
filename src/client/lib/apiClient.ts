@@ -2,6 +2,7 @@ import {
   copyFallbackDailySchedule,
   deleteFallbackDailySchedule,
   getFallbackBootstrap,
+  getFallbackCosting,
   getFallbackDailyDates,
   getFallbackDailySchedule,
   getFallbackHandovers,
@@ -9,9 +10,11 @@ import {
   getFallbackTraveler,
   getFallbackUser,
   getFallbackWeeklyReport,
+  patchFallbackCosting,
   saveFallbackDailySchedule,
   saveFallbackHandover,
   submitDirectToGoogleAppsScript,
+  FALLBACK_ORDERS,
   FALLBACK_PRODUCTS,
 } from './clientFallbackStore';
 import { isStaticHost } from './navigation';
@@ -192,8 +195,21 @@ async function handleClientFallback<T>(path: string, options: ApiFetchOptions): 
     const dateParam = urlParams.get('date') || '2026-10-30';
     return getFallbackDailySchedule(dateParam) as unknown as T;
   }
+  if (norm === '/orders' || norm.startsWith('/orders?') || norm.startsWith('/orders/')) {
+    return {
+      items: FALLBACK_ORDERS,
+      deliveries: [],
+    } as unknown as T;
+  }
   if (norm.includes('/costing')) {
-    return FALLBACK_PRODUCTS as unknown as T;
+    if (options.method === 'PATCH') {
+      const parts = path.split('/').filter(Boolean);
+      const spId = decodeURIComponent(parts[parts.length - 1] || '');
+      const body = (options.json || {}) as any;
+      const res = patchFallbackCosting(spId, Number(body?.quotedPrice || 0));
+      return res as unknown as T;
+    }
+    return getFallbackCosting() as unknown as T;
   }
   if (norm.includes('/qc/inspections')) {
     return [] as unknown as T;

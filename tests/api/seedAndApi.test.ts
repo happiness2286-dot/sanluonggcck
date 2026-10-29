@@ -137,7 +137,7 @@ describe('SQLite WAL Seeder, RBAC Security & Atomic MES REST API', () => {
     // Attendance & 3P Payroll
     const attRes = await adminAgent.get('/api/v1/attendance/2026-10');
     expect(attRes.status).toBe(200);
-    expect(attRes.body.employees).toHaveLength(16);
+    expect(attRes.body.employees).toHaveLength(18);
 
     const cellRes = await adminAgent
       .put('/api/v1/attendance/2026-10/cell')

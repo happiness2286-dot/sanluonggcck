@@ -9,6 +9,7 @@ import type {
   JobTravelerDto,
   MachineInfo,
   OperationMeta,
+  ProductCostingSummary,
   ProductMeta,
   PurchaseOrderInfo,
   QuickSwitchProfile,
@@ -871,4 +872,99 @@ export function deleteFallbackDailySchedule(workDate: string): { success: boolea
     }
   } catch {}
   return { success: true };
+}
+
+// ==================== COSTING & P&L PERSISTENCE (FALLBACK & CLIENT MODE) ====================
+export function getFallbackCosting(): {
+  items: ProductCostingSummary[];
+  summary: {
+    totalProducts: number;
+    profitCount: number;
+    lossCount: number;
+    totalNetProfit: number;
+  };
+} {
+  let customQuotes: Record<string, number> = {};
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('GCCK_CUSTOM_QUOTED_PRICES') : null;
+    if (raw) customQuotes = JSON.parse(raw);
+  } catch {}
+
+  const rawList = (seedData.costingList || []) as any[];
+  const items: ProductCostingSummary[] = rawList.map((c) => {
+    const spId = String(c.spId);
+    const totalStdCost = Number(c.totalStdCost || 0);
+    const quoted = customQuotes[spId] !== undefined ? customQuotes[spId] : Number(c.quotedPrice) || totalStdCost || 0;
+    const actualUnit = Number(c.actualUnitCost) || totalStdCost || 0;
+    const fQty = Number(c.finishedQty) || 0;
+    const unitProfit = quoted - actualUnit;
+    const totalBatchProfit = unitProfit * fQty;
+    const marginPct = quoted > 0 ? (unitProfit / quoted) * 100 : 0;
+
+    return {
+      spId,
+      customer: String(c.customer || 'Vico - Nội bộ / Khách lẻ'),
+      productName: String(c.productName || ''),
+      opCount: Number(c.opCount || 1),
+      opsSummary: String(c.opsSummary || ''),
+      totalSec: Number(c.totalSec || 0),
+      totalHours: Number(c.totalHours || Math.round((Number(c.totalSec || 0) / 3600) * 10) / 10),
+      stdLabor: Number(c.stdLabor || 0),
+      stdMach: Number(c.stdMach || 0),
+      stdTool: Number(c.stdTool || 0),
+      stdOverhead: Number(c.stdOverhead || 0),
+      rawMaterialCost: Number(c.rawMaterialCost || 0),
+      outsourceCost: Number(c.outsourceCost || 0),
+      totalStdCost,
+      quotedPrice: quoted,
+      wipQty: Number(c.wipQty || 0),
+      wipBatchCost: Number(c.wipBatchCost || 0),
+      finishedQty: fQty,
+      actualBatchCost: Number(c.actualBatchCost || 0),
+      actualUnitCost: actualUnit,
+      unitProfit,
+      totalBatchProfit,
+      marginPct,
+      hasActual: Boolean(c.hasActual),
+      stepBreakdowns: c.stepBreakdowns || [],
+      drawingUrl: c.drawingUrl || '',
+      techDocUrl: c.techDocUrl || '',
+    };
+  });
+
+  const profitCount = items.filter((i) => i.unitProfit >= 0).length;
+  const lossCount = items.filter((i) => i.unitProfit < 0).length;
+  const totalNetProfit = items.reduce(
+    (sum, i) => sum + (i.hasActual ? i.totalBatchProfit : 0),
+    0
+  );
+
+  return {
+    items,
+    summary: {
+      totalProducts: items.length,
+      profitCount,
+      lossCount,
+      totalNetProfit,
+    },
+  };
+}
+
+export function patchFallbackCosting(
+  spId: string,
+  quotedPrice: number
+): { success: boolean; item: ProductCostingSummary } {
+  try {
+    let customQuotes: Record<string, number> = {};
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('GCCK_CUSTOM_QUOTED_PRICES') : null;
+    if (raw) customQuotes = JSON.parse(raw);
+    customQuotes[spId] = quotedPrice;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('GCCK_CUSTOM_QUOTED_PRICES', JSON.stringify(customQuotes));
+    }
+  } catch {}
+
+  const all = getFallbackCosting();
+  const item = all.items.find((i) => i.spId === spId) || all.items[0];
+  return { success: true, item };
 }
