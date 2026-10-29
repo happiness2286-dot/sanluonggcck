@@ -50,6 +50,7 @@ import {
   Modal,
   useToast,
 } from '@client/components/ui/IndustrialPrimitives';
+import { getFallbackBootstrap } from '@client/lib/clientFallbackStore';
 import { DEFAULT_DRIVE_FOLDER_URL } from '@shared/driveHelper';
 import type { AdminTabCommonProps } from '../types';
 
@@ -60,9 +61,10 @@ interface DailyDateMeta {
 }
 
 export function DailyWeeklyScheduleTab({
-  bootstrap,
+  bootstrap: rawBootstrap,
   onRefreshBootstrap,
 }: AdminTabCommonProps) {
+  const bootstrap = rawBootstrap || getFallbackBootstrap();
   const toast = useToast();
   const [subTab, setSubTab] = useState<'daily' | 'weekly'>('daily');
 
