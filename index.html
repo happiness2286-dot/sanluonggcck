@@ -19,12 +19,12 @@
           params.delete('p');
           var search = params.toString() ? ('?' + params.toString()) : '';
           var base = window.location.pathname.replace(/\/$/, '');
-          var newPath = base + redirect + search + window.location.hash;
-          window.history.replaceState(null, null, newPath);
+          var normSub = redirect.startsWith('/') ? redirect : '/' + redirect;
+          window.location.replace(base + '/#' + normSub + search + window.location.hash);
         }
       })();
     </script>
-    <script type="module" crossorigin src="./assets/index-Bmm4oJmL.js"></script>
+    <script type="module" crossorigin src="./assets/index-CBe3Ho2Z.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-CSZIf33C.css">
   </head>
   <body class="bg-industrial-canvas text-slate-900 antialiased selection:bg-blue-600/15 selection:text-blue-900">

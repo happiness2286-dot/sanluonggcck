@@ -9,9 +9,10 @@
         var pathSegments = l.pathname.slice(1).split('/');
         var repoBase = '/' + (pathSegments[0] || '');
         var subPath = l.pathname.slice(repoBase.length) || '/';
-        var search = l.search ? ('&' + l.search.slice(1)) : '';
+        var search = l.search ? ('?' + l.search.slice(1)) : '';
+        var normSub = subPath.startsWith('/') ? subPath : '/' + subPath;
         var redirectUrl = l.protocol + '//' + l.hostname + (l.port ? (':' + l.port) : '') +
-          repoBase + '/?p=' + encodeURIComponent(subPath) + search + l.hash;
+          repoBase + '/#' + normSub + search + l.hash;
         window.location.replace(redirectUrl);
       })();
     </script>
@@ -23,4 +24,3 @@
     </div>
   </body>
 </html>
-
