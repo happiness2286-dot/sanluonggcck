@@ -2,6 +2,7 @@ import {
   copyFallbackDailySchedule,
   deleteFallbackDailySchedule,
   getClientStoredLogs,
+  getCombinedLogs,
   getFallbackAttendance,
   getFallbackBootstrap,
   getFallbackCosting,
@@ -325,7 +326,7 @@ async function handleClientFallback<T>(path: string, options: ApiFetchOptions): 
 
   if (norm.includes('/logs')) {
     return {
-      items: getClientStoredLogs(),
+      items: getCombinedLogs(),
     } as unknown as T;
   }
 

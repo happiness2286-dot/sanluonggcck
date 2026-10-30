@@ -113,6 +113,51 @@ function getSpreadsheet() {
 function doGet(e) {
   try {
     var ss = getSpreadsheet();
+
+    // XỬ LÝ ĐỌC NHẬT KÝ SẢN LƯỢNG CHO MINI APP & PHÂN HỆ TỔ TRƯỞNG / QC
+    if (e && e.parameter && (e.parameter.action === "getRecentLogs" || e.parameter.action === "logs")) {
+      var sheet = ss.getSheetByName("Nhật Ký Sản Lượng") || ss.getSheets()[0];
+      var logs = [];
+      var lastRow = sheet.getLastRow();
+      if (lastRow >= 2) {
+        var startR = Math.max(2, lastRow - 99);
+        var numR = lastRow - startR + 1;
+        var rVals = sheet.getRange(startR, 1, numR, 24).getValues();
+        for (var ri = rVals.length - 1; ri >= 0; ri--) {
+          var rRow = rVals[ri];
+          var wDate = normalizeToISODate(rRow[2]);
+          var wName = String(rRow[3] || "").trim();
+          if (!wName && !wDate) continue;
+          logs.push({
+            id: startR + ri,
+            recordUid: "GAS-ROW-" + (startR + ri),
+            workDate: wDate || "2026-10-30",
+            timeStr: rRow[1] instanceof Date ? Utilities.formatDate(rRow[1], "GMT+7", "dd/MM HH:mm") : String(rRow[1] || ""),
+            workerName: wName,
+            workerId: "",
+            customer: String(rRow[4] || ""),
+            productName: String(rRow[5] || ""),
+            poId: String(rRow[6] || "PO485-01"),
+            opName: String(rRow[7] || ""),
+            machineName: String(rRow[8] || ""),
+            okQty: Number(rRow[9] || 0),
+            reworkQty: Number(rRow[10] || 0),
+            scrapQty: Number(rRow[11] || 0),
+            income: Number(rRow[12] || 0),
+            shiftType: String(rRow[23] || "Ca 1"),
+            kpiPct: 100,
+            kpiStatus: "Đạt 100% ĐM",
+            qcStatus: "PASSED"
+          });
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        "result": "success",
+        "success": true,
+        "items": logs,
+        "logs": logs
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
     // 1. Tự động nhận diện Sheet Master Data theo mọi cách đặt tên (ưu tiên bảng của Quản Đốc)
     var masterSheet = ss.getSheetByName("Danh Mục Master Data") ||
       ss.getSheetByName("Danh Mục Master") ||
@@ -335,6 +380,50 @@ function doPost(e) {
     if (data.downtime_min === undefined && data.stopMinutes !== undefined) data.downtime_min = data.stopMinutes;
     if (!data.downtime_note && data.stopReason) data.downtime_note = data.stopReason;
     if (!data.record_id && data.recordUid) data.record_id = data.recordUid;
+
+    // XỬ LÝ ĐỌC NHẬT KÝ SẢN LƯỢNG CHO MINI APP & PHÂN HỆ TỔ TRƯỞNG / QC
+    if (data.action === "getRecentLogs" || (e && e.parameter && e.parameter.action === "getRecentLogs")) {
+      var logs = [];
+      var lastRow = sheet.getLastRow();
+      if (lastRow >= 2) {
+        var startR = Math.max(2, lastRow - 99);
+        var numR = lastRow - startR + 1;
+        var rVals = sheet.getRange(startR, 1, numR, 24).getValues();
+        for (var ri = rVals.length - 1; ri >= 0; ri--) {
+          var rRow = rVals[ri];
+          var wDate = normalizeToISODate(rRow[2]);
+          var wName = String(rRow[3] || "").trim();
+          if (!wName && !wDate) continue;
+          logs.push({
+            id: startR + ri,
+            recordUid: "GAS-ROW-" + (startR + ri),
+            workDate: wDate || "2026-10-30",
+            timeStr: rRow[1] instanceof Date ? Utilities.formatDate(rRow[1], "GMT+7", "dd/MM HH:mm") : String(rRow[1] || ""),
+            workerName: wName,
+            workerId: "",
+            customer: String(rRow[4] || ""),
+            productName: String(rRow[5] || ""),
+            poId: String(rRow[6] || "PO485-01"),
+            opName: String(rRow[7] || ""),
+            machineName: String(rRow[8] || ""),
+            okQty: Number(rRow[9] || 0),
+            reworkQty: Number(rRow[10] || 0),
+            scrapQty: Number(rRow[11] || 0),
+            income: Number(rRow[12] || 0),
+            shiftType: String(rRow[23] || "Ca 1"),
+            kpiPct: 100,
+            kpiStatus: "Đạt 100% ĐM",
+            qcStatus: "PASSED"
+          });
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        "result": "success",
+        "success": true,
+        "items": logs,
+        "logs": logs
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
 
     // XỬ LÝ LƯU DANH MỤC MASTER (SẢN PHẨM, NGUYÊN CÔNG & CÔNG NHÂN) TỪ ADMIN
     if (data.action === "saveMasterData" && data.masterData) {

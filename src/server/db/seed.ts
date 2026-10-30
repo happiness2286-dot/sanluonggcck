@@ -537,7 +537,7 @@ export function seedIfEmpty(db: DatabaseSync, customSeedJsonPath?: string): bool
         Number(l.reworkQty) || 0,
         Number(l.scrapQty) || 0,
         Number(l.stopMinutes) || 0,
-        0, // NV00053 is Hành chính (Tháng) -> direct per-turn income = 0
+        Number(l.income) || 0,
         Number(l.batchCost) || 0,
         kpiPct,
         normalizeVn(l.kpiStatus || 'Đạt 100% ĐM'),

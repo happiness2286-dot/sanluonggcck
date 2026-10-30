@@ -161,18 +161,37 @@ export function getFallbackUser(workerId: string = 'NV00214'): AuthSessionUser {
 
 export function getClientStoredLogs(): any[] {
   try {
-    const raw = localStorage.getItem(LOCAL_LOGS_KEY);
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(LOCAL_LOGS_KEY) : null;
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
+export function getCombinedLogs(): any[] {
+  const stored = getClientStoredLogs();
+  const seed = (seedData.recentLogs || []) as any[];
+  const map = new Map<string, any>();
+  for (const l of stored) {
+    const key = String(l.recordUid || l.id || Math.random());
+    map.set(key, l);
+  }
+  for (const l of seed) {
+    const key = String(l.recordUid || l.id || Math.random());
+    if (!map.has(key)) {
+      map.set(key, l);
+    }
+  }
+  return Array.from(map.values());
+}
+
 export function saveClientStoredLog(log: any): void {
   try {
     const existing = getClientStoredLogs();
     existing.unshift(log);
-    localStorage.setItem(LOCAL_LOGS_KEY, JSON.stringify(existing.slice(0, 100)));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(LOCAL_LOGS_KEY, JSON.stringify(existing.slice(0, 100)));
+    }
   } catch {
     // ignore
   }
@@ -272,9 +291,7 @@ export function saveFallbackHandover(row: HandoverSlipRow): void {
 
 export function getFallbackBootstrap(currentUser?: AuthSessionUser | null): BootstrapPayload {
   const user = currentUser || getFallbackUser('NV00214');
-  const storedLogs = getClientStoredLogs();
-  const seedLogs = (seedData.recentLogs || []) as any[];
-  const combinedLogs = [...storedLogs, ...seedLogs];
+  const combinedLogs = getCombinedLogs();
 
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -442,20 +459,48 @@ export async function submitDirectToGoogleAppsScript(
   const mockLogDto: any = {
     id: Date.now(),
     recordUid,
+    timeStr: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
     workDate: payload.workDate || todayStr,
+    shiftType: payload.shiftType || 'Ca 1 (Sáng 06h-14h)',
+    startTime: payload.startTime || '06:00',
+    endTime: payload.endTime || '14:00',
+    overtimeMinutes: Number(payload.overtimeMinutes || 0),
+    isSunday: payload.isSunday ? 1 : 0,
     workerId: payload.workerId,
     workerName: worker.name,
+    machineId: 'M01',
+    machineName: machName,
+    machineMode: 'FIRST',
     customer: op?.customer || 'Vico - Nội bộ / Khách lẻ',
     productName: op?.productName || 'Sản phẩm GCCK',
     poId: payload.poId || 'PO485-01',
+    spId: op?.spId || 'SP002',
+    ncId: op?.ncId || payload.ncId || 'NC1',
     opName: op?.opName || payload.ncId || 'Gia công',
-    machineName: machName,
-    okQty: payload.okQty || 0,
-    reworkQty: payload.reworkQty || 0,
+    stage: op?.stage || 'End',
+    stepOrder: op?.stepOrder || 1,
+    isFinalOp: op?.isFinalOp || 1,
+    stdSeconds: op?.stdSeconds || 1800,
+    okQty: Number(payload.okQty || 0),
+    reworkQty: Number(payload.reworkQty || 0),
     scrapQty,
+    defectType: scrapQty > 0 ? (payload.defectType || 'Không rõ lỗi') : 'Không có lỗi',
+    damageValue: Number(payload.damageValue || 0),
+    stopMinutes: Number(payload.stopMinutes || 0),
+    stopReason: payload.stopReason || 'Không có dừng máy',
+    toolCode: payload.toolCode || op?.toolCode || '',
+    edgesUsed,
+    selfCheckOk: 1,
+    qcStatus: 'PASSED',
+    pieceWage: unitWage,
+    directPieceIncome: turnIncome,
     income: turnIncome,
-    shiftType: payload.shiftType || 'Ca 1',
+    batchCost: Math.round(turnIncome * 1.4),
+    kpiPct: 100,
+    kpiStatus: 'Đạt 100% ĐM',
+    note: `[PO: ${payload.poId || 'PO485-01'}] [Ca: ${payload.startTime || '06:00'}-${payload.endTime || '14:00'}]`,
     createdAt: new Date().toISOString(),
+    isVoided: 0,
   };
 
   saveClientStoredLog(mockLogDto);
@@ -760,7 +805,7 @@ export function getFallbackDailyDates(): {
   try {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(DAILY_SCHEDULE_INDEX_KEY) : null;
     if (raw) storedDates = JSON.parse(raw);
-  } catch {}
+  } catch { }
 
   const merged = Array.from(new Set([...storedDates, ...defaultDates])).sort((a, b) =>
     b.localeCompare(a)
@@ -792,14 +837,14 @@ export function getFallbackDailySchedule(workDate: string): {
         return { success: true, rows: parsed };
       }
     }
-  } catch {}
+  } catch { }
 
   const rows = buildDefaultScheduleRows(workDate);
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(DAILY_SCHEDULE_PREFIX + workDate, JSON.stringify(rows));
     }
-  } catch {}
+  } catch { }
   return { success: true, rows };
 }
 
@@ -819,7 +864,7 @@ export function saveFallbackDailySchedule(
         localStorage.setItem(DAILY_SCHEDULE_INDEX_KEY, JSON.stringify(storedDates));
       }
     }
-  } catch {}
+  } catch { }
   return { success: true, count: rows.length };
 }
 
@@ -851,7 +896,7 @@ export function deleteFallbackDailySchedule(workDate: string): { success: boolea
       storedDates = storedDates.filter((d) => d !== workDate);
       localStorage.setItem(DAILY_SCHEDULE_INDEX_KEY, JSON.stringify(storedDates));
     }
-  } catch {}
+  } catch { }
   return { success: true };
 }
 
@@ -869,7 +914,7 @@ export function getFallbackCosting(): {
   try {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('GCCK_CUSTOM_QUOTED_PRICES') : null;
     if (raw) customQuotes = JSON.parse(raw);
-  } catch {}
+  } catch { }
 
   const rawList = (seedData.costingList || []) as any[];
   const items: ProductCostingSummary[] = rawList.map((c) => {
@@ -943,7 +988,7 @@ export function patchFallbackCosting(
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('GCCK_CUSTOM_QUOTED_PRICES', JSON.stringify(customQuotes));
     }
-  } catch {}
+  } catch { }
 
   const all = getFallbackCosting();
   const item = all.items.find((i) => i.spId === spId) || all.items[0];
@@ -956,7 +1001,7 @@ export function getGasWebhookUrl(): string {
     if (custom && custom.trim().startsWith('https://script.google.com/')) {
       return custom.trim();
     }
-  } catch {}
+  } catch { }
   return GAS_WEBHOOK_URL;
 }
 
@@ -972,7 +1017,7 @@ export function getFallbackAttendance(yearMonth: string = '2026-10') {
   try {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
     if (saved) rawList = JSON.parse(saved);
-  } catch {}
+  } catch { }
 
   if (!rawList || rawList.length === 0) {
     rawList = (seedData.attendanceList || []).map((a: any) => ({
@@ -1008,7 +1053,7 @@ export function saveFallbackAttendanceCell(yearMonth: string, empId: string, day
   try {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
     if (saved) rawList = JSON.parse(saved);
-  } catch {}
+  } catch { }
 
   if (!rawList || rawList.length === 0) {
     rawList = (seedData.attendanceList || []).map((a: any) => ({
@@ -1032,7 +1077,7 @@ export function saveFallbackAttendanceCell(yearMonth: string, empId: string, day
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(storageKey, JSON.stringify(rawList));
       }
-    } catch {}
+    } catch { }
   }
 
   const updatedSummary = target ? computeEmployeeMonthlyStats(target, year, month, mealConfig) : null;

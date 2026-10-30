@@ -663,12 +663,23 @@ export function WorkerPortal() {
     selfCheckOk,
   ]);
 
+  // Tab 3 Personal Logs (strictly scoped to current logged-in worker when role === WORKER)
+  const myRecentLogs = useMemo(() => {
+    const all = bootstrap?.recentLogs ?? [];
+    if (!user) return [];
+    return all.filter(
+      (l) => l.workerId === user.workerId || (user.name && l.workerName === user.name)
+    );
+  }, [bootstrap?.recentLogs, user]);
+
   const effectivePayroll = serverPreview?.payroll ?? localPayroll;
   const myTodayIncome = useMemo(() => {
     if (todayOverrideIncome !== null) return todayOverrideIncome;
-    if (!user || !bootstrap?.todayAccumulated) return 0;
-    return Number(bootstrap.todayAccumulated[user.workerId] || 0);
-  }, [todayOverrideIncome, user, bootstrap?.todayAccumulated]);
+    if (!user) return 0;
+    const base = Number(bootstrap?.todayAccumulated?.[user.workerId] || 0);
+    const todayLogsSum = myRecentLogs.reduce((acc, l) => acc + (Number(l.income) || 0), 0);
+    return Math.max(base, todayLogsSum);
+  }, [todayOverrideIncome, user, bootstrap?.todayAccumulated, myRecentLogs]);
 
   // Shift Handover Alert matching selected machine or PO
   const matchingHandoverAlerts = useMemo(() => {
@@ -1153,12 +1164,7 @@ export function WorkerPortal() {
       });
   }, [ordersList, ordersFilter, ordersSearch]);
 
-  // Tab 3 Personal Logs (strictly scoped to current logged-in worker when role === WORKER)
-  const myRecentLogs = useMemo(() => {
-    const all = bootstrap?.recentLogs ?? [];
-    if (!user) return [];
-    return all.filter((l) => l.workerId === user.workerId);
-  }, [bootstrap?.recentLogs, user]);
+
 
   return (
     <div className="w-full max-w-full overflow-x-clip pb-24">
